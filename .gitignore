@@ -1,0 +1,28 @@
+#folders
+.idea
+bin
+
+#project files
+*.iml
+/src/main/java/com/smartx/api/v1/server/impl
+/src/main/resources/smartx.conf
+
+#compile object files
+*.o
+*.obj
+*.class
+target
+
+#distrubition
+distribution
+
+#log
+*.log
+log
+logs
+database
+
+#local db
+*.sh
+*.db
+smartx.conf
