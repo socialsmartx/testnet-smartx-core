@@ -137,37 +137,6 @@ public class HttpXmlClient {
         }
         return httpost;
     }
-    public static void test1() {
-        Map<String, String> params = new HashMap<String, String>();
-        String time = String.valueOf(System.currentTimeMillis() / 1000);
-        params.put("access_key", "8bbb1a8e-b4eaf601-d58565a6-b82c8");
-        params.put("created", time);
-        params.put("method", "get_account_info");
-        String info = "access_key=8bbb1a8e-b4eaf601-d58565a6-b82c8&created=" + time + "&method=get_account_info&secret_key=" + "5be10da0-7c18e591-bf80ef13-11f99";
-        String sign = MyUtil.Md5(info);
-        log.info("info:" + info + " sign=" + sign);
-        params.put("sign", sign);
-        String xml = "";
-        try {
-            xml = HttpXmlClient.post("https://api.huobi.com/apiv2.php", params);
-            // xml = HttpXmlClient.post("http://btckan.com/price", params);
-        } catch (UnsupportedEncodingException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-        log.info("============================================");
-        log.info(xml);
-    }
-    public static void test2() {
-        String xml = "";
-        xml = HttpXmlClient.get("http://api.huobi.com/staticmarket/ticker_btc_json.js");
-        JSONObject oj = JSONObject.fromObject(xml);
-        log.info("============================================");
-        log.info(xml);
-        xml = oj.getString("ticker");
-        oj = JSONObject.fromObject(xml);
-        log.info(oj.getString("last"));
-    }
     public static void getOptionNum() throws SatException, Exception {
     }
     public static void testandroidhttp() {
@@ -194,40 +163,5 @@ public class HttpXmlClient {
     public static void main(String[] args) {
         testandroidhttp();
         System.exit(0);
-		
-		/*
-		TenpayConfiguration.getInstance().initialize("config\\common.properties");	
-		FuncBase.m_DBConnet = new DBConnection();
-		String username = TenpayConfiguration.getInstance().getString("USER_NAME"); 
-		String passwd = TenpayConfiguration.getInstance().getString("PASSWD");
-		String connection = TenpayConfiguration.getInstance().getString("CONNECTION");
-		Server.iconectMax = Long.parseLong(TenpayConfiguration.getInstance().getString("CONNECTMAX"));
-		log.info(connection +" " + username + " " + passwd);
-		
-		if (!FuncBase.m_DBConnet.CreateMysql(connection, username, passwd))
-		{
-			log.error("connection to database error!");
-			System.exit(0);
-		}
-		
-		for (;;)
-		{
-		
-		try {
-			
-			getOptionNum();
-			
-			Thread.sleep(5*1000);
-			
-		} catch (CoinException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		}
-		*/
     }
 }
