@@ -12,7 +12,7 @@ bin
 target
 
 #distrubition
-distribution
+/src/main/resources/smartx.conf
 
 #log
 *.log
