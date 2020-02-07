@@ -1,0 +1,1215 @@
+{
+  "basePath": "/v1.0.0",
+  "consumes": [
+    "application/x-www-form-urlencoded"
+  ],
+  "components":{
+    "headers":{
+      "xTotalItems":{
+        "schema":{
+          "type":"string",
+          "description":"xTotalItems description"
+        }
+      }
+    }
+  },
+  "definitions": {
+    "ApiHandlerResponse": {
+      "type": "object",
+      "discriminator": "ApiHandlerResponse",
+      "required": [
+        "success"
+      ],
+      "properties": {
+        "success": {
+          "description": "Whether this operation was processed successfully",
+          "type": "boolean"
+        },
+        "message": {
+          "description": "Success/error message",
+          "type": "string"
+        }
+      }
+    },
+    "NodeDistType":{
+      "type": "object",
+      "properties": {
+        "country": {
+          "description": "The Country Name",
+          "type": "string"
+        },
+        "nodeCount": {
+          "description": "The Node Count In The Country ",
+          "type": "string",
+          "format": "int64",
+          "pattern": "^\\d+$"
+        }
+      }
+    },
+    "AccountType": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "description": "The address of this account",
+          "type": "string",
+          "pattern": "^(0x)?[0-9a-fA-F]{40}$"
+        },
+        "available": {
+          "description": "The available balance of this account",
+          "type": "string",
+          "format": "int64",
+          "pattern": "^\\d+$"
+        },
+        "locked": {
+          "description": "The locked balance of this account",
+          "type": "string",
+          "format": "int64",
+          "pattern": "^\\d+$"
+        },
+        "nonce": {
+          "description": "The nonce of this account",
+          "type": "string",
+          "format": "int64",
+          "pattern": "^\\d+$"
+        },
+        "transactionCount": {
+          "description": "The number of transactions received/sent",
+          "type": "integer",
+          "format": "int32"
+        },
+        "internalTransactionCount": {
+          "description": "The number of internal transactions received/sent",
+          "type": "integer",
+          "format": "int32"
+        },
+        "pendingTransactionCount": {
+          "description": "The number of pending transaction from/to this account",
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "TransferNonceType":{
+      "type": "object",
+      "properties": {
+        "timestamp": {
+          "description": "Block timestamp in milliseconds specified by the block producer.",
+          "type": "string",
+          "format": "int64",
+          "pattern": "^\\d+$"
+        },
+        "nonce": {
+          "description": "The block nonce",
+          "type": "string",
+          "pattern": "^(0x)?[0-9a-fA-F]{40}$"
+        }
+      }
+    },
+    "TransactionType": {
+      "type": "object",
+      "properties": {
+        "hash": {
+          "description": "The transaction hash",
+          "type": "string",
+          "pattern": "^(0x)?[0-9a-fA-F]{64}$"
+        },
+        "type": {
+          "description": "The transaction type",
+          "type": "string",
+          "enum": [
+            "COINBASE",
+            "TRANSFER",
+            "DELEGATE",
+            "VOTE",
+            "UNVOTE",
+            "CREATE",
+            "CALL"
+          ]
+        },
+        "from": {
+          "description": "Sender's address",
+          "type": "string",
+          "pattern": "^(0x)?[0-9a-fA-F]{40}$"
+        },
+        "to": {
+          "description": "Recipient's address",
+          "type": "string",
+          "pattern": "^(0x)?[0-9a-fA-F]{40}$"
+        },
+        "value": {
+          "description": "Transaction value in nano SEM",
+          "type": "string",
+          "format": "int64",
+          "pattern": "^\\d+$"
+        },
+        "fee": {
+          "description": "Transaction fee in nano SEM. For CREATE/CALL, this field is zero; use gas instead",
+          "type": "string",
+          "format": "int64",
+          "pattern": "^\\d+$"
+        },
+        "nonce": {
+          "description": "The nonce of the sender",
+          "type": "string",
+          "format": "int64",
+          "pattern": "^\\d+$"
+        },
+        "timestamp": {
+          "description": "Transaction timestamp in milliseconds specified by the sender. There can be a time drift up to 2 hours.",
+          "type": "string",
+          "format": "int64",
+          "pattern": "^\\d+$"
+        },
+        "data": {
+          "description": "Transaction data encoded in hexadecimal string",
+          "type": "string",
+          "pattern": "^(0x)?[0-9a-fA-F]*$"
+        },
+        "gas": {
+          "description": "The gas limit set by the sender",
+          "type": "string",
+          "format": "int64",
+          "pattern": "^\\d+$"
+        },
+        "gasPrice": {
+          "description": "The gas Price set by the sender",
+          "type": "string",
+          "format": "int64",
+          "pattern": "^\\d+$"
+        }
+      }
+    },
+    "DoTransactionResponse": {
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ApiHandlerResponse"
+        },
+        {
+          "properties": {
+            "result": {
+              "description": "The transaction hash",
+              "type": "string",
+              "pattern": "^(0x)?[0-9a-fA-F]{64}$"
+            }
+          }
+        }
+      ]
+    },
+    "GetAccountResponse": {
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ApiHandlerResponse"
+        },
+        {
+          "properties": {
+            "result": {
+              "$ref": "#/definitions/AccountType"
+            }
+          }
+        }
+      ]
+    },
+    "BalanceType": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "description": "The address of this address",
+          "type": "string",
+          "pattern": "^(0x)?[0-9a-fA-F]{40}$"
+        },
+        "available": {
+          "description": "The available balance of this address",
+          "type": "string",
+          "format": "int64",
+          "pattern": "^\\d+$"
+        }
+      }
+    },
+    "JsonType": {
+      "type": "object",
+      "properties": {
+        "json": {
+          "description": "Json string",
+          "type": "string"
+        }
+      }
+    },
+    "GetBalanceResponse": {
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ApiHandlerResponse"
+        },
+        {
+          "properties": {
+            "result": {
+              "$ref": "#/definitions/BalanceType"
+            }
+          }
+        }
+      ]
+    },
+    "GetAccountTransactionsResponse": {
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ApiHandlerResponse"
+        },
+        {
+          "properties": {
+            "transactionCount": {
+              "description": "The transaction count",
+              "type": "integer",
+              "format": "int32"
+            },
+            "transactionList": {
+              "description": "The transaction list",
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/TransactionType"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "GetLatestBlockHeightResponse": {
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ApiHandlerResponse"
+        },
+        {
+          "properties": {
+            "height": {
+              "description": "The latest block height",
+              "type": "string",
+              "format": "int64",
+              "pattern": "^\\d+$"
+            }
+          }
+        }
+      ]
+    },
+    "GetInfoResponse": {
+      "type": "object",
+      "required": [
+        "success"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/ApiHandlerResponse"
+        },
+        {
+          "properties": {
+            "result": {
+              "$ref": "#/definitions/InfoType"
+            }
+          }
+        }
+      ]
+    },
+    "GetGlobalInfoResponse": {
+      "type": "object",
+      "required": [
+        "success"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/ApiHandlerResponse"
+        },
+        {
+          "properties": {
+            "globalHashRate": {
+              "description": "The global hash rate",
+              "type": "string"
+            },
+            "globalHashRatePer": {
+              "description": "The global hash rate change percent",
+              "type": "string"
+            },
+            "globalBlockTimeCost": {
+              "description": "The global block time cost",
+              "type": "string"
+            },
+            "globalBlockTimeCostPer": {
+              "description": "The global block time cost change percent",
+              "type": "string"
+            },
+            "currentBlockHeight": {
+              "description": "The global block height",
+              "type": "string"
+            },
+            "currentBlockHeightPer": {
+              "description": "The global block height change percent",
+              "type": "string"
+            },
+            "globalDifficulty": {
+              "description": "The global difficulty",
+              "type": "string"
+            },
+            "globalDifficultyPer": {
+              "description": "The global difficulty  change percent",
+              "type": "string"
+            },
+            "globalTransactionCount": {
+              "description": "The global transaction count",
+              "type": "string"
+            },
+            "globalTransactionCountPer": {
+              "description": "The global transaction count change percent",
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "GetGlobalNodeDistInfoResponse": {
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ApiHandlerResponse"
+        },
+        {
+          "properties": {
+            "nodeDistInfoCount": {
+              "description": "The node dist info count",
+              "type": "string",
+              "format": "int64",
+              "pattern": "^\\d+$"
+            },
+            "nodeDistInfoList": {
+              "description": "The node dist info list",
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/NodeDistType"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "InfoType": {
+      "type": "object",
+      "properties": {
+        "network": {
+          "description": "The connected network",
+          "type": "string"
+        },
+        "capabilities": {
+          "description": "The features supported",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "clientId": {
+          "description": "The client identifier string",
+          "type": "string"
+        },
+        "coinbase": {
+          "description": "The address used for establishing connections to the network",
+          "type": "string",
+          "pattern": "^(0x)?[0-9a-fA-F]{40}$"
+        },
+        "latestBlockNumber": {
+          "description": "The number of the last block",
+          "type": "string",
+          "format": "int64",
+          "pattern": "^\\d+$"
+        },
+        "latestBlockHash": {
+          "description": "The hash of the last block",
+          "type": "string",
+          "pattern": "^(0x)?[0-9a-fA-F]{64}$"
+        },
+        "activePeers": {
+          "description": "The number of actively connected peers",
+          "type": "integer",
+          "format": "int32"
+        },
+        "pendingTransactions": {
+          "description": "The number of transactions in pending pool",
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "SignType":{
+      "type": "object",
+      "properties": {
+        "address": {
+          "description": "signer address.",
+          "type": "string",
+          "format": "int64",
+          "pattern": "^\\d+$"
+        },
+        "sign": {
+          "description": "ecdsa sign.",
+          "type": "string",
+          "format": "int64",
+          "pattern": "^\\d+$"
+        }
+      }
+    },
+    "BlockType": {
+      "type": "object",
+      "properties": {
+        "height": {
+          "description": "Block height.",
+          "type": "string",
+          "format": "int64",
+          "pattern": "^\\d+$"
+        },
+        "reward": {
+          "description": "Mc Block Reward.",
+          "type": "string",
+          "format": "int64",
+          "pattern": "^\\d+$"
+        },
+        "transactionCount": {
+          "description": "Transaction Count In Block",
+          "type": "integer",
+          "format": "int32"
+        },
+        "timeCost": {
+          "description": "Time cost to generate the block",
+          "type": "string",
+          "format": "int64",
+          "pattern": "^\\d+$"
+        },
+        "hash": {
+          "description": "The block hash",
+          "type": "string",
+          "pattern": "^(0x)?[0-9a-fA-F]{64}$"
+        },
+        "difficulty": {
+          "description": "Main Block difficulty.",
+          "type": "string",
+          "format": "int64",
+          "pattern": "^\\d+$"
+        },
+        "headtype": {
+          "description": "The block header type",
+          "type": "integer",
+          "format": "int32"
+        },
+        "btype": {
+          "description": "the block type",
+          "type": "string",
+          "format": "int32"
+        },
+        "amount": {
+          "description": "the amount of the block",
+          "type": "string",
+          "format": "int64",
+          "pattern": "^\\d+$"
+        },
+        "fee": {
+          "description": "the fee of the transaction",
+          "type": "string",
+          "format": "int64",
+          "pattern": "^\\d+$"
+        },
+        "timestamp": {
+          "description": "Block timestamp in milliseconds specified by the block producer.",
+          "type": "string",
+          "format": "int64",
+          "pattern": "^\\d+$"
+        },
+        "address": {
+          "description": "The block producer's address",
+          "type": "string",
+          "pattern": "^(0x)?[0-9a-fA-F]{40}$"
+        },
+        "from": {
+          "description": "The transaction sender's address",
+          "type": "string",
+          "pattern": "^(0x)?[0-9a-fA-F]{40}$"
+        },
+        "to": {
+          "description": "The transaction receiver's address",
+          "type": "string",
+          "pattern": "^(0x)?[0-9a-fA-F]{40}$"
+        },
+        "nonce": {
+          "description": "The block nonce",
+          "type": "string",
+          "pattern": "^(0x)?[0-9a-fA-F]{40}$"
+        },
+        "random": {
+          "description": "The random value of the block",
+          "type": "string",
+          "pattern": "^(0x)?[0-9a-fA-F]{64}$"
+        },
+        "ruleSignCount": {
+          "description": "The number of rule sign",
+          "type": "integer",
+          "format": "int32"
+        },
+        "ruleSignList": {
+          "description": "The rule sign list",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SignType"
+          }
+        }
+      }
+    },
+    "GetBlockResponse": {
+      "type": "object",
+      "required": [
+        "success"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/ApiHandlerResponse"
+        },
+        {
+          "properties": {
+            "result": {
+              "$ref": "#/definitions/BlockType"
+            }
+          }
+        }
+      ]
+    },
+    "GetLatestBlockResponse": {
+      "type": "object",
+      "required": [
+        "success"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/ApiHandlerResponse"
+        },
+        {
+          "properties": {
+            "result": {
+              "$ref": "#/definitions/BlockType"
+            }
+          }
+        }
+      ]
+    },
+    "GetLatestMcBlockResponse": {
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ApiHandlerResponse"
+        },
+        {
+          "properties": {
+            "mcBlockCount": {
+              "description": "The Mc Block count",
+              "type": "string",
+              "format": "int64",
+              "pattern": "^\\d+$"
+            },
+            "mcBlockList": {
+              "description": "The Latest Mc Block List",
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/BlockType"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "GetTransferNonceResponse": {
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ApiHandlerResponse"
+        },
+        {
+          "properties": {
+            "result": {
+              "$ref": "#/definitions/TransferNonceType"
+            }
+          }
+        }
+      ]
+    },
+    "GetMineTaskResponse": {
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ApiHandlerResponse"
+        },
+        {
+          "properties": {
+            "result": {
+              "$ref": "#/definitions/jsonType"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "info": {
+    "description": "SmartX is an experimental high-performance blockchain platform that powers decentralized application.",
+    "version": "1.0.0",
+    "title": "SmartX API",
+    "contact": {
+      "name": "SmartX Foundation",
+      "url": "https://www.smartx.one"
+    },
+    "license": {
+      "name": "MIT License",
+      "url": "https://opensource.org/licenses/mit-license.php"
+    }
+  },
+  "paths": {
+    "/info": {
+      "get": {
+        "tags": [
+          "Node"
+        ],
+        "summary": "Get node info",
+        "description": "Returns kernel info.",
+        "operationId": "getInfo",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/GetInfoResponse"
+            }
+          },
+          "400": {
+            "description": "bad request",
+            "schema": {
+              "$ref": "#/definitions/ApiHandlerResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
+      }
+    },
+    "/global-info": {
+      "get": {
+        "tags": [
+          "Node"
+        ],
+        "summary": "Get Global Info",
+        "description": "Returns Global Info.",
+        "operationId": "getGlobalInfo",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/GetGlobalInfoResponse"
+            }
+          },
+          "400": {
+            "description": "bad request",
+            "schema": {
+              "$ref": "#/definitions/ApiHandlerResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
+      }
+    },
+    "/global-node-dist-info": {
+      "get": {
+        "tags": [
+          "Node"
+        ],
+        "summary": "Get Global Node Dist Info",
+        "description": "Returns Global Node Dist Info.",
+        "operationId": "getGlobalNodeDistInfo",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/GetGlobalNodeDistInfoResponse"
+            }
+          },
+          "400": {
+            "description": "bad request",
+            "schema": {
+              "$ref": "#/definitions/ApiHandlerResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
+      }
+    },
+    "/account": {
+      "get": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "Get account info",
+        "description": "Returns the basic information about an account.",
+        "operationId": "getAccount",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "description": "Address of account",
+            "required": true,
+            "type": "string",
+            "pattern": "^(0x)?[0-9a-fA-F]{40}$"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/GetAccountResponse"
+            }
+          },
+          "400": {
+            "description": "bad request",
+            "schema": {
+              "$ref": "#/definitions/ApiHandlerResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
+      }
+    },
+    "/account/transactions": {
+      "get": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "Get account transactions by height.",
+        "description": "Returns transactions by height.",
+        "operationId": "getAccountTransactions",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "description": "Address of account",
+            "required": true,
+            "type": "string",
+            "pattern": "^(0x)?[0-9a-fA-F]{40}$"
+          },
+          {
+            "name": "height",
+            "in": "query",
+            "description": "height of blockchain",
+            "required": true,
+            "type": "string",
+            "format": "int64",
+            "pattern": "^\\d+$"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/GetAccountTransactionsResponse"
+            }
+          },
+          "400": {
+            "description": "bad request",
+            "schema": {
+              "$ref": "#/definitions/ApiHandlerResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
+      }
+    },
+    "/balance": {
+      "get": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "get address balance",
+        "description": "return balance of address",
+        "operationId": "getBalance",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "description": "Address of account",
+            "required": true,
+            "type": "string",
+            "pattern": "^(0x)?[0-9a-fA-F]{40}$"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/GetBalanceResponse"
+            }
+          },
+          "400": {
+            "description": "bad request",
+            "schema": {
+              "$ref": "#/definitions/ApiHandlerResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
+      }
+    },
+    "/transaction/raw": {
+      "post": {
+        "deprecated": false,
+        "tags": [
+          "Wallet"
+        ],
+        "summary": "Broadcast a raw transaction",
+        "description": "Broadcasts a raw transaction to the network.",
+        "operationId": "broadcastRawTransaction",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "raw",
+            "in": "query",
+            "description": "Raw transaction encoded in hexadecimal string.",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/DoTransactionResponse"
+            }
+          },
+          "400": {
+            "description": "bad request",
+            "schema": {
+              "$ref": "#/definitions/ApiHandlerResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
+      }
+    },
+    "/block-by-hash": {
+      "get": {
+        "tags": [
+          "Blockchain"
+        ],
+        "summary": "Get block by hash",
+        "description": "Returns a block by block hash.",
+        "operationId": "getBlockByHash",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "hash",
+            "in": "query",
+            "description": "Hash of block",
+            "required": true,
+            "type": "string",
+            "pattern": "^(0x)?[0-9a-fA-F]{64}$"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/GetBlockResponse"
+            }
+          },
+          "400": {
+            "description": "bad request",
+            "schema": {
+              "$ref": "#/definitions/ApiHandlerResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
+      }
+    },
+    "/latest-block-height": {
+      "get": {
+        "tags": [
+          "Blockchain"
+        ],
+        "summary": "get latest block height",
+        "description": "get latest block height",
+        "operationId": "getLatestBlockHeight",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/GetLatestBlockHeightResponse"
+            }
+          },
+          "400": {
+            "description": "bad request",
+            "schema": {
+              "$ref": "#/definitions/ApiHandlerResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
+      }
+    },
+    "/latest-mc-block": {
+      "get": {
+        "tags": [
+          "Blockchain"
+        ],
+        "summary": "get latest mc block info list",
+        "description": "get latest mc block info list",
+        "operationId": "getLatestMcBlockInfo",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/GetLatestMcBlockResponse"
+            }
+          },
+          "400": {
+            "description": "bad request",
+            "schema": {
+              "$ref": "#/definitions/ApiHandlerResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
+      }
+    },
+    "/latest-block": {
+      "get": {
+        "tags": [
+          "Blockchain"
+        ],
+        "summary": "get latest block info list",
+        "description": "get latest block info list",
+        "operationId": "getLatestBlockInfo",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/GetLatestMcBlockResponse"
+            }
+          },
+          "400": {
+            "description": "bad request",
+            "schema": {
+              "$ref": "#/definitions/ApiHandlerResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
+      }
+    },
+    "/transaction/transfernonce":{
+      "get": {
+        "tags": [
+          "Wallet"
+        ],
+        "summary": "get latest block height",
+        "description": "get latest block height",
+        "operationId": "getTransferNonce",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/GetTransferNonceResponse"
+            }
+          },
+          "400": {
+            "description": "bad request",
+            "schema": {
+              "$ref": "#/definitions/ApiHandlerResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
+      }
+    },
+
+    "/getnetwork-power": {
+      "get": {
+        "tags": [
+          "Blockchain"
+        ],
+        "summary": "get latest block info list",
+        "description": "get latest block info list",
+        "operationId": "getNetworkPower",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/GetLatestMcBlockResponse"
+            }
+          },
+          "400": {
+            "description": "bad request",
+            "schema": {
+              "$ref": "#/definitions/ApiHandlerResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
+      }
+    },
+
+    "/getmine-task": {
+      "get": {
+        "tags": [
+          "Blockchain"
+        ],
+        "summary": "get latest block info list",
+        "description": "get latest block info list",
+        "operationId": "getMineTask",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "json",
+            "in": "query",
+            "description": "task of json",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/GetMineTaskResponse"
+            }
+          },
+          "400": {
+            "description": "bad request",
+            "schema": {
+              "$ref": "#/definitions/ApiHandlerResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
+      }
+    }
+
+  },
+
+  "produces": [
+    "application/json"
+  ],
+  "schemes": [
+    "http"
+  ],
+  "security": [
+    {
+      "basicAuth": []
+    }
+  ],
+  "securityDefinitions": {
+    "basicAuth": {
+      "type": "basic"
+    }
+  },
+  "swagger": "2.0"
+}
