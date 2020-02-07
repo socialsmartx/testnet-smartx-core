@@ -14,6 +14,7 @@ target
 #distrubition
 /src/main/resources/smartx.conf
 /src/main/resources/log4j.xml
+/src/main/java/com/smartx/api/v1/server/impl
 
 #log
 *.log
