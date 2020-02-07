@@ -1,7 +1,7 @@
 # smartx
 
 #### Description
-smartx主网正式代码
+smartx testnet
 
 #### Software Architecture
 Software architecture description

@@ -4,8 +4,6 @@ bin
 
 #project files
 *.iml
-/src/main/java/com/smartx/api/v1/server/impl
-/src/main/resources/smartx.conf
 
 #compile object files
 *.o
