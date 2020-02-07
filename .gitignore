@@ -13,6 +13,7 @@ target
 
 #distrubition
 /src/main/resources/smartx.conf
+/src/main/resources
 
 #log
 *.log
