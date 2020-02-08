@@ -27,4 +27,3 @@ database
 #local db
 *.sh
 *.db
-smartx.conf
