@@ -1,3 +1,6 @@
+
+
+### Description
 Java-Smartx
 
 SAT is the main chain project developed by SmartX’s community-centred team. It is a decentralized, minable BlockDAG project with a “transaction-based DAG” structure that can achieve limitless performance expansion, which is essentially equivalent to a traditional blockchain system that can achieve limitless horizontal expansion. 
@@ -8,21 +11,21 @@ SmartX will be an integrated and multi-functional platform for cashflow, dataflo
 
 Java-Smartx Based on jdk1.8 or higher
 
-Contribution
+### Contribution
 Thank you for considering helping out with our source code. We appreciate any contributions, even the smallest fixes.
 
-Here are some guidelines before you start:
+#### Here are some guidelines before you start:
 
 Please fork the project to contribute your pull requests.
 If you wish to submit complex changes, please fire an issue to communicate with the core devs first.
 Pull requests need to be based on and opened against the master branch.
 Code must be formatted using smartx_fmt.sh.
 
-Resources
-Smartx Website
-Smartx Paper
-Medium
-License
+### Resources
+
+[Smartx Website](https://smartx.one/)
+[Smartx Paper](https://smartx.one/Whitepaper.pdf)
+[Medium]
+
+### License
 GNU General Public License v3.0
-
-
