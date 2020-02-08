@@ -25,7 +25,6 @@ Code must be formatted using smartx_fmt.sh.
 
 [Smartx Website](https://smartx.one/)
 [Smartx Paper](https://smartx.one/Whitepaper.pdf)
-[Medium]
 
 ### License
 GNU General Public License v3.0
