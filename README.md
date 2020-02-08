@@ -1,37 +1,28 @@
-# smartx
+Java-Smartx
 
-#### 介绍
-smartx主网正式代码
+SAT is the main chain project developed by SmartX’s community-centred team. It is a decentralized, minable BlockDAG project with a “transaction-based DAG” structure that can achieve limitless performance expansion, which is essentially equivalent to a traditional blockchain system that can achieve limitless horizontal expansion. 
 
-#### 软件架构
-软件架构说明
+SmartX’s platform will allow blockchain technology to be seamlessly adopted in use cases such as private communication, in-game payment as well as in products for example, coupons and points given by shops and merchants. It links service providers and users around the world and uses social entertainment as a gateway to building a trustworthy and secure social entertainment ecosystem.
+
+SmartX will be an integrated and multi-functional platform for cashflow, dataflow as well as “value-flow”. In SmartX’s trust-based structure, intrinsic values of individuals and entities will be delivered through the network to form an ecosystem where both tangible and intangible values can be properly recognized. Such an ecosystem will greatly improve the efficiency of society as a whole.
+
+Java-Smartx Based on jdk1.8 or higher
+
+Contribution
+Thank you for considering helping out with our source code. We appreciate any contributions, even the smallest fixes.
+
+Here are some guidelines before you start:
+
+Please fork the project to contribute your pull requests.
+If you wish to submit complex changes, please fire an issue to communicate with the core devs first.
+Pull requests need to be based on and opened against the master branch.
+Code must be formatted using smartx_fmt.sh.
+
+Resources
+Smartx Website
+Smartx Paper
+Medium
+License
+GNU General Public License v3.0
 
 
-#### 安装教程
-
-1. xxxx
-2. xxxx
-3. xxxx
-
-#### 使用说明
-
-1. xxxx
-2. xxxx
-3. xxxx
-
-#### 参与贡献
-
-1. Fork 本仓库
-2. 新建 Feat_xxx 分支
-3. 提交代码
-4. 新建 Pull Request
-
-
-#### 码云特技
-
-1. 使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
-2. 码云官方博客 [blog.gitee.com](https://blog.gitee.com)
-3. 你可以 [https://gitee.com/explore](https://gitee.com/explore) 这个地址来了解码云上的优秀开源项目
-4. [GVP](https://gitee.com/gvp) 全称是码云最有价值开源项目，是码云综合评定出的优秀开源项目
-5. 码云官方提供的使用手册 [https://gitee.com/help](https://gitee.com/help)
-6. 码云封面人物是一档用来展示码云会员风采的栏目 [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
