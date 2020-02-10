@@ -31,31 +31,6 @@ public class DataBase {
     public static String rpcclient = null;
     public static String rpcserver = null;
     public static void InitDBTable() throws SatException, SQLException {
-        DataSet dt = new DataSet(DataDB.m_DBConnet);
-        DbSource dbsrc = SATObjFactory.GetDbSource();
-        try {
-            String sql = "create table IF NOT EXISTS " + dbsrc.GetDBName();
-            sql += "t_account(" + "Faddress varchar(45)," + "Fbalance varchar(20)," + "PRIMARY KEY (`Faddress`)" + ")";
-            if (!dt.excute(sql)) throw new SatException(ErrCode.DB_INSERT_ERROR, "create db error:" + sql);
-            sql = "create table if not exists " + dbsrc.GetDBName() + "t_order(" + "Fversion varchar(1)," + "Fheadtype varchar(4)," + "Fbtype int," + "ftime varchar(20)," + "Ftimestamp long," + "Fhash varchar(64)," + "Fnum BIGINT," + "Fnonce varchar(32)," + "Faddress varchar(45)," + "Frefhash varchar(64)," + "Fnodename varchar(20)," + "Fepoch BIGINT," + "Fdiff varchar(64)," + "Famount varchar(64)," + "fmodify_time varchar(20)," + "frecv_time varchar(20)," + "Fmerkle_hash varchar(65)," + "FPremerkle_hash varchar(65), Fheight BIGINT, Fecsign varchar(160), Frandom varchar(65), " + "Frulesign varchar(2048), " + "Primary key (`Fhash`)" + ")";
-            if (!dt.excute(sql)) throw new SatException(ErrCode.DB_INSERT_ERROR, "create db error: " + sql);
-            sql = "create table if not exists " + dbsrc.GetDBName() + "t_reftx(" + "Fmhash varchar(64)," + "Ftxhash varchar(64)," + "ftime datetime" + ")";
-            if (!dt.excute(sql)) throw new SatException(ErrCode.DB_INSERT_ERROR, "create db error:" + sql);
-            sql = "create table if not exists " + dbsrc.GetDBName() + "t_fields(Finhash varchar(64),Fouthash varchar(64),famount varchar(64), ftime datetime,fnonce " + " varchar(32),PRIMARY KEY(fnonce,Finhash))";
-            if (!dt.excute(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "create db error:" + sql);
-            sql = "create table if not exists " + dbsrc.GetDBName() + "t_waitorder(" + "Fversion varchar(1)," + "Fheadtype varchar(4)," + "Fbtype int," + "ftime varchar(20)," + "Ftimestamp long," + "Fhash varchar(64)," + "Fnum BIGINT," + "Fnonce varchar(32)," + "Faddress varchar(45)," + "Frefhash varchar(64)," + "Fnodename varchar(20)," + "Fepoch BIGINT," + "Fdiff varchar(64)," + "Famount varchar(64)," + "fmodify_time varchar(20)," + "frecv_time varchar(20)," + "Fmerkle_hash varchar(65)," + "FPremerkle_hash varchar(65), Fheight BIGINT, Fecsign varchar(160), Frandom varchar(65), " + "Frulesign varchar(2048), Primary key (`Fhash`)" + ")";
-            if (!dt.excute(sql)) throw new SatException(ErrCode.DB_INSERT_ERROR, "create db error: " + sql);
-            sql = "create table if not exists " + dbsrc.GetDBName() + " t_waitreftx(" + "Fmhash varchar(64)," + "Ftxhash varchar(64)," + "ftime datetime, FEpochtype varchar(3)" + ")";
-            if (!dt.excute(sql)) throw new SatException(ErrCode.DB_INSERT_ERROR, "create db error:" + sql);
-            sql = "create table if not exists " + dbsrc.GetDBName() + "t_waitfields(Finhash varchar(64),Fouthash varchar(64),famount varchar(64), ftime datetime,fnonce " + " varchar(32), FEpochtype varchar(3) , PRIMARY KEY(fnonce,Finhash))";
-            if (!dt.excute(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "create db error:" + sql);
-        } catch (SatException e) {
-            throw e;
-        } catch (Exception e) {
-            throw e;
-        } finally {
-            dt.Close();
-        }
     }
     public static void ShowBlock(String hash) throws SatException, SQLException {
         QueryDB querydb = SATObjFactory.GetQueryDB();
