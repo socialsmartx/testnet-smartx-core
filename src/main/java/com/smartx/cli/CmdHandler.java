@@ -4,6 +4,7 @@ import java.sql.SQLException;
 
 import org.apache.commons.lang.StringUtils;
 
+import com.smartx.core.blockchain.BlockDAG;
 import com.smartx.core.blockchain.DataBase;
 import com.smartx.core.blockchain.SATObjFactory;
 import com.smartx.core.consensus.GeneralMine;
@@ -19,6 +20,7 @@ public class CmdHandler implements PubSubSubscriber {
     public SmartxCommands commandexcute = SATObjFactory.GetCommand();
     private static final PubSub pubSub = PubSubFactory.getDefault();
     private static long storageheight = 0;
+    private BlockDAG blockdag = SATObjFactory.GetBlockDAG();
     public void CmdHandler() {
         pubSub.subscribe(this, GetHeightEvent.class);
     }
@@ -48,9 +50,13 @@ public class CmdHandler implements PubSubSubscriber {
             }
             String amount = StringUtils.trim(strs[2]);
             String to = StringUtils.trim(strs[1]);
-            SmartxCommands.Transfer(to, amount);
+            blockdag.Transfer(to, amount);
         } else if (value.contains("balance")) {
-            SmartxCommands.ShowBalance();
+            String[] strs = value.split("\\s+");
+            if (strs.length != 2) {
+                return 1;
+            }
+            SmartxCommands.ShowBalance(strs[1]);
         } else if (value.contains("getcoinbase")) {
             System.out.println(SmartxCommands.GetCoinBase());
         } else if (value.contains("setcoinbase")) {
@@ -59,6 +65,9 @@ public class CmdHandler implements PubSubSubscriber {
                 return 1;
             }
             SmartxCommands.SetCoinBase(strs[1]);
+        } else if (value.equals("undo"))
+        {
+
         } else if (value.contains("account")) {
             SmartxCommands.list_accounts();
         } else if (value.equals("create")) {
@@ -70,7 +79,12 @@ public class CmdHandler implements PubSubSubscriber {
             }
             commandexcute.ShowMcBlock(Long.parseLong(strs[1]));
         } else if (value.contains("main")) {
-            commandexcute.SortBlock("5");
+            String len = "5";
+            String[] strs = value.split("\\s+");
+            if (strs.length > 1) {
+                len = strs[1];
+            }
+            commandexcute.SortBlock(len);
         } else if (value.contains("sort")) {
             String len = "0";
             String[] strs = value.split("\\s+");

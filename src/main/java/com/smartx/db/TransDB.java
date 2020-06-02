@@ -10,6 +10,7 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import com.smartx.block.Account;
 import com.smartx.block.Block;
 import com.smartx.block.Field;
 import com.smartx.block.FieldItem;
@@ -24,86 +25,86 @@ import com.smartx.util.Tools;
 
 public class TransDB extends DataDB {
     private static final Logger log = Logger.getLogger("core");
-    public synchronized Block GetBlock(String hash, int dbtype) throws SatException, SQLException {
+    public Block GetBlock(String hash, int dbtype) {
         if (hash.equals("")) return null;
-        synchronized (this) {
-            DataSet dt = new DataSet(DataDB.m_DBConnet);
-            Block blk = null;
-            try {
-                DbSource dbsrc = SATObjFactory.GetDbSource();
-                String sql = "";
-                sql += "select Fversion, Fheadtype,Fbtype,Ftimestamp,Fhash,";
-                sql += "Fnum,Fnonce,Faddress,Frefhash,Fnodename,Fepoch,Fdiff, Ftime, Frecv_time, Fmerkle_hash,FPremerkle_hash, Fecsign, Frandom, Frulesign, Fheight from " + dbsrc.GetDBName();
-                if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_order where";
-                else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH) sql += "t_waitorder where";
-                sql += " fhash ='";
-                sql += hash;
-                sql += "'";
-                if (!dt.Init(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "query db error");
-                while (!dt.IsEnd()) {
-                    blk = new Block();
-                    blk.header.headtype = dt.rs.getInt("Fheadtype");
-                    blk.header.btype = Block.BLKType.values()[dt.rs.getInt("Fbtype")];
-                    blk.header.timestamp = Long.parseLong(dt.rs.getString("Ftimestamp"));
-                    blk.time = dt.rs.getString("Ftime");
-                    blk.header.hash = hash;
-                    blk.timenum = dt.rs.getInt("Fnum");
-                    blk.header.nonce = dt.rs.getString("Fnonce");
-                    blk.header.address = dt.rs.getString("Faddress");
-                    blk.blackrefer = dt.rs.getString("Frefhash");
-                    blk.nodename = dt.rs.getString("Fnodename");
-                    blk.epoch = dt.rs.getInt("Fepoch");
-                    blk.diff = dt.rs.getString("Fdiff");
-                    blk.mkl_hash = dt.rs.getString("Fmerkle_hash");
-                    blk.premkl_hash = dt.rs.getString("FPremerkle_hash");
-                    blk.sign = dt.rs.getString("Fecsign");
-                    blk.header.random = dt.rs.getString("Frandom");
-                    String rulesign = dt.rs.getString("Frulesign");
-                    blk.ruleSigns = Tools.GetRuleSignListByJson(rulesign);
-                    blk.height = dt.rs.getInt("Fheight");
-                    blk.blackrefer = dt.rs.getString("Frefhash");
-                    break;
-                }
-                dt.Close();
-                if (null == blk) return blk;
-                if (blk.header.btype == Block.BLKType.SMARTX_MAIN || blk.header.btype == Block.BLKType.SMARTX_MAINREF) {
-                    ArrayList<String> referhashs = GetReferHashs(blk, dbtype);
-                    for (int i = 0; i < referhashs.size(); i++) {
-                        Field fd = new Field();
-                        fd.type = Field.FldType.SAT_FIELD_OUT;
-                        fd.amount = new BigInteger("0");
-                        fd.hash = referhashs.get(i).split("\\|")[0];
-                        fd.time = referhashs.get(i).split("\\|")[1];
-                        blk.Flds.add(fd);
-                    }
-                } else if (blk.header.btype == Block.BLKType.SMARTX_TXS) {
-                    FieldItem fdb = new FieldItem();
-                    GetFields(blk.header.nonce, fdb, dbtype, blk);
-                    Field in = new Field();
-                    in.amount = fdb.amount;
-                    in.fee = new BigInteger("0");
-                    in.type = Field.FldType.SAT_FIELD_IN;
-                    in.hash = fdb.inhash;
-                    blk.Flds.add(in);
-                    // OUT
-                    Field out = new Field();
-                    out.amount = fdb.amount;
-                    out.fee = new BigInteger("0");
-                    out.type = Field.FldType.SAT_FIELD_OUT;
-                    out.hash = fdb.outhash;
-                    blk.Flds.add(out);
-                }
-                return blk;
-            } catch (SatException e) {
-                throw e;
-            } catch (SQLException e) {
-                throw e;
-            } finally {
-                dt.Close();
+        DataSet dt = new DataSet(DataDB.m_DBConnet);
+        Block blk = null;
+        DbSource dbsrc = SATObjFactory.GetDbSource();
+        String sql = "";
+        sql += "select Fversion, Fheadtype,Fbtype,Ftimestamp,Fhash,";
+        sql += "Fnum,Fnonce,Faddress,Frefhash,Fnodename,Fepoch,Fdiff, Ftime, Frecv_time, Fmerkle_hash,FPremerkle_hash, Fecsign, Frandom, Frulesign, Fheight from " + dbsrc.GetDBName();
+        if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_order where";
+        else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH) sql += "t_waitorder where";
+        sql += " fhash ='";
+        sql += hash;
+        sql += "'";
+        try {
+            if (!dt.Init(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "query db error");
+            while (!dt.IsEnd()) {
+                blk = new Block();
+                blk.header.headtype = Integer.parseInt(dt.rs.getString("Fheadtype"));
+                blk.header.btype = Block.BLKType.values()[dt.rs.getInt("Fbtype")];
+                blk.header.timestamp = Long.parseLong(dt.rs.getString("Ftimestamp"));
+                blk.time = dt.rs.getString("Ftime");
+                blk.header.hash = hash;
+                blk.timenum = dt.rs.getInt("Fnum");
+                blk.header.nonce = dt.rs.getString("Fnonce");
+                blk.header.address = dt.rs.getString("Faddress");
+                blk.blackrefer = dt.rs.getString("Frefhash");
+                blk.nodename = dt.rs.getString("Fnodename");
+                blk.epoch = dt.rs.getInt("Fepoch");
+                blk.diff = dt.rs.getString("Fdiff");
+                blk.mkl_hash = dt.rs.getString("Fmerkle_hash");
+                blk.premkl_hash = dt.rs.getString("FPremerkle_hash");
+                blk.sign = dt.rs.getString("Fecsign");
+                blk.header.random = dt.rs.getString("Frandom");
+                String rulesign = dt.rs.getString("Frulesign");
+                blk.ruleSigns = Tools.GetRuleSignListByJson(rulesign);
+                blk.height = dt.rs.getInt("Fheight");
+                blk.blackrefer = dt.rs.getString("Frefhash");
+                break;
             }
+            dt.Close();
+            if (null == blk) return blk;
+            if (blk.header.btype == Block.BLKType.SMARTX_MAIN || blk.header.btype == Block.BLKType.SMARTX_MAINREF) {
+                ArrayList<String> referhashs = GetReferHashs(blk, dbtype);
+                for (int i = 0; i < referhashs.size(); i++) {
+                    Field fd = new Field();
+                    fd.type = Field.FldType.SAT_FIELD_OUT;
+                    fd.amount = new BigInteger("0");
+                    fd.hash = referhashs.get(i).split("\\|")[0];
+                    fd.time = referhashs.get(i).split("\\|")[1];
+                    blk.Flds.add(fd);
+                }
+            } else if (blk.header.btype == Block.BLKType.SMARTX_TXS) {
+                FieldItem fdb = new FieldItem();
+                GetFields(blk.header.nonce, fdb, dbtype, blk);
+                Field in = new Field();
+                in.amount = fdb.amount;
+                in.fee = new BigInteger("0");
+                in.type = Field.FldType.SAT_FIELD_IN;
+                in.hash = fdb.inhash;
+                blk.Flds.add(in);
+                // OUT
+                Field out = new Field();
+                out.amount = fdb.amount;
+                out.fee = new BigInteger("0");
+                out.type = Field.FldType.SAT_FIELD_OUT;
+                out.hash = fdb.outhash;
+                blk.Flds.add(out);
+            }
+            return blk;
+        } catch (SatException e) {
+            e.printStackTrace();
+            return null;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return null;
+        } finally {
+            dt.Close();
         }
     }
-    public String BlockHeaderSql(Block blk, int dbtype) throws SatException {
+    public String BlockHeaderSql(Block blk, int dbtype) {
         SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         DbSource dbsrc = SATObjFactory.GetDbSource();
         String sql = "insert into " + dbsrc.GetDBName();
@@ -125,7 +126,7 @@ public class TransDB extends DataDB {
         sql += rulesign + "'," + blk.height + ")";
         return sql;
     }
-    public String BackReferSql(String hash, String hashref, int dbtype) throws SatException {
+    public String BackReferSql(String hash, String hashref, int dbtype) {
         DbSource dbsrc = SATObjFactory.GetDbSource();
         String sql = "update " + dbsrc.GetDBName();
         if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_order ";
@@ -137,7 +138,7 @@ public class TransDB extends DataDB {
         sql += "'";
         return sql;
     }
-    public String ReferBlockSql(Block blk, String hashref, int dbtype) throws SatException {
+    public String ReferBlockSql(Block blk, String hashrefed, int dbtype) {
         DbSource dbsrc = SATObjFactory.GetDbSource();
         String sql = "insert into " + dbsrc.GetDBName();
         if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_reftx(Fmhash, ftxhash, ftime";
@@ -145,7 +146,7 @@ public class TransDB extends DataDB {
         sql += ")values('";
         sql += blk.header.hash;
         sql += "', '";
-        sql += hashref;
+        sql += hashrefed;
         sql += "', '";
         sql += Tools.TimeStamp2DateEx(System.currentTimeMillis());
         sql += "')";
@@ -173,8 +174,7 @@ public class TransDB extends DataDB {
     public void SaveMainBlock(Block blk, int dbtype) throws SatException, SQLException {
         SaveBlockHeader(blk, dbtype);
         for (int i = 0; i < blk.Flds.size(); i++) {
-            int type = GetDbtype(blk.Flds.get(i).hash);
-            SaveBackRefer(blk.Flds.get(i).hash, blk.header.hash, type);
+            SaveBackRefer(blk.Flds.get(i).hash, blk.header.hash, DataBase.SMARTX_BLOCK_HISTORY);
         }
         for (int i = 0; i < blk.Flds.size(); i++) {
             if (blk.Flds.get(i).type != Field.FldType.SAT_FIELD_OUT)
@@ -202,33 +202,133 @@ public class TransDB extends DataDB {
         }
         SaveField(blk, inhash, outhash, amount, dbtype);
     }
+    public boolean GetRefExist(DataSet dt, int dbtype, String mhash, String hashrefed) throws SatException {
+        dt.Close();
+        String sql = "select fmhash from ";
+        if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_reftx where fmhash='";
+        else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH) sql += "t_waitreftx where fmhash='";
+        sql += mhash;
+        sql += "' and ftxhash='";
+        sql += hashrefed;
+        sql += "'";
+        if (!dt.Init(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "open db error");
+        return dt.Query();
+    }
+    public synchronized boolean SetTransaction(String in, BigInteger inbal, String out, BigInteger outbal) {
+        DbSource dbsrc = SATObjFactory.GetDbSource();
+        DataSet dt = new DataSet(DataDB.m_DBConnet);
+        try {
+            DataDB.m_DBConnet.Begin();
+            String sql1 = "select Faddress from " + dbsrc.GetDBName() + "t_account where Faddress ='";
+            sql1 += in;
+            sql1 += "'";
+            if (!dt.Init(sql1)) throw new SatException(ErrCode.DB_OPEN_ERROR, "open db error");
+            if (!dt.Query()) {
+                // not exist error
+                throw new SatException(ErrCode.SAT_TRANSFER_IN_ERROR, "in account isn't exist");
+            } else {
+                Account acc = new Account();
+                acc.balance = inbal;
+                acc.address = in;
+                UpdateAccount(acc);
+            }
+            dt.Close();
+            String sql2 = "select Faddress from " + dbsrc.GetDBName() + "t_account where Faddress ='";
+            sql2 += out;
+            sql2 += "'";
+            if (!dt.Init(sql2)) throw new SatException(ErrCode.DB_OPEN_ERROR, "open db error");
+            if (!dt.Query()) {
+                // no exist insert
+                Account acc = new Account();
+                acc.balance = outbal;
+                acc.address = out;
+                InsertAccount(acc);
+            } else {
+                Account acc = new Account();
+                acc.balance = outbal;
+                acc.address = out;
+                UpdateAccount(acc);
+            }
+            DataDB.m_DBConnet.Commit();
+        } catch (Exception e) {
+            log.error(e);
+            DataDB.m_DBConnet.RollBack();
+            return false;
+        } finally {
+            dt.Close();
+        }
+        return true;
+    }
+    private void InsertAccount(Account acc) throws SatException {
+        DbSource dbsrc = SATObjFactory.GetDbSource();
+        DataSet dt = new DataSet(DataDB.m_DBConnet);
+        String sql = "insert into " + dbsrc.GetDBName() + "t_account(Faddress, Fbalance)values('";
+        sql += acc.address;
+        sql += "', ";
+        sql += acc.balance;
+        sql += ")";
+        if (!dt.excAffect(sql, 1)) throw new SatException(ErrCode.DB_INSERT_ERROR, "insert account to db error");
+        dt.Close();
+    }
+    private void UpdateAccount(Account acc) throws SatException {
+        DbSource dbsrc = SATObjFactory.GetDbSource();
+        DataSet dt = new DataSet(DataDB.m_DBConnet);
+        String sql = "update " + dbsrc.GetDBName() + "t_account set Fbalance=";
+        sql += acc.balance;
+        sql += " where Faddress = '";
+        sql += acc.address;
+        sql += "'";
+        if (!dt.excAffect(sql, 1)) {
+            log.error("error sql:" + sql);
+            throw new SatException(ErrCode.DB_UPDATE_ERROR, "update amount to db error");
+        }
+        dt.Close();
+    }
     public int SaveMainBlock_mysql(Block blk, int dbtype) {
         try {
             SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             DbSource dbsrc = SATObjFactory.GetDbSource();
             DataDB.m_DBConnet.Begin();
             DataSet dt = new DataSet(DataDB.m_DBConnet);
+            DataSet dttrnas = new DataSet(DataDB.m_DBConnet);
             String sql = "select Fhash from " + dbsrc.GetDBName();
             if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_order where fhash ='";
             else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH) sql += "t_waitorder where fhash ='";
             sql += blk.header.hash;
-            sql += "'";//for update
+            sql += "' for update";
             if (!dt.Init(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "open db error");
-            if (dt.Query()) throw new SatException(ErrCode.SAT_TXBLOCK_EXIST, "the txblock is exist");
+            if (dt.Query()) {
+               for (int i = 0; i < blk.Flds.size(); i++) {
+                    if (blk.Flds.get(i).type != Field.FldType.SAT_FIELD_OUT)
+                        throw new SatException(ErrCode.SAT_BLOCKREF_ERROR, "mc refence type error");
+                    String referhashed = blk.Flds.get(i).hash;
+                    if (!GetRefExist(dt, dbtype, blk.header.hash, referhashed)) {
+                        sql = ReferBlockSql(blk, referhashed, dbtype);
+                        dttrnas.addBatch(sql);
+                    }
+                }
+                if (false == dttrnas.exeBatch()) throw new SQLException();
+                DataDB.m_DBConnet.Commit();
+                return 0;
+                //throw new SatException(ErrCode.SAT_TXBLOCK_EXIST, "the txblock is exist");
+            }
             sql = BlockHeaderSql(blk, dbtype);
-            DataSet dttrnas = new DataSet(DataDB.m_DBConnet);
             dttrnas.addBatch(sql);
             for (int i = 0; i < blk.Flds.size(); i++) {
-                int type = GetDbtype(blk.Flds.get(i).hash);
-                sql = BackReferSql(blk.Flds.get(i).hash, blk.header.hash, type);
+                // save back references
+                //int type = GetDbtype(blk.Flds.get(i).hash);
+                sql = BackReferSql(blk.Flds.get(i).hash, blk.header.hash, DataBase.SMARTX_BLOCK_HISTORY);
                 dttrnas.addBatch(sql);
             }
+            dt.Close();
             for (int i = 0; i < blk.Flds.size(); i++) {
                 if (blk.Flds.get(i).type != Field.FldType.SAT_FIELD_OUT)
                     throw new SatException(ErrCode.SAT_BLOCKREF_ERROR, "mc refence type error");
-                String referhash = blk.Flds.get(i).hash;
-                sql = ReferBlockSql(blk, referhash, dbtype);
-                dttrnas.addBatch(sql);
+                String referhashed = blk.Flds.get(i).hash;
+                if (!GetRefExist(dt, dbtype, blk.header.hash, referhashed)) {
+                    sql = ReferBlockSql(blk, referhashed, dbtype);
+                    dttrnas.addBatch(sql);
+                }
             }
             if (false == dttrnas.exeBatch()) throw new SQLException();
             DataDB.m_DBConnet.Commit();
@@ -248,7 +348,7 @@ public class TransDB extends DataDB {
             if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_order where fhash ='";
             else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH) sql += "t_waitorder where fhash ='";
             sql += blk.header.hash;
-            sql += "'";//for update
+            sql += "' for update";
             if (!dt.Init(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "open db error");
             if (dt.Query()) throw new SatException(ErrCode.SAT_TXBLOCK_EXIST, "the txblock is exist");
             sql = BlockHeaderSql(blk, dbtype);
@@ -266,8 +366,18 @@ public class TransDB extends DataDB {
                     outhash = blk.Flds.get(i).hash;
                 }
             }
-            sql = FieldSql(blk, inhash, outhash, amount, dbtype);
-            dttrans.addBatch(sql);
+            // need to query if t_field exists
+            dt.Close();
+            sql = "select fnonce from ";
+            if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_fields where fnonce='";
+            else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH) sql += "t_waitfields where fnonce='";
+            sql += blk.header.nonce;
+            sql += "' for update";
+            if (!dt.Init(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "open db error");
+            if (!dt.Query()) {
+                sql = FieldSql(blk, inhash, outhash, amount, dbtype);
+                dttrans.addBatch(sql);
+            }
             log.debug("sql2:" + sql);
             if (false == dttrans.exeBatch()) throw new SQLException();
             DataDB.m_DBConnet.Commit();
@@ -276,92 +386,128 @@ public class TransDB extends DataDB {
             DataDB.m_DBConnet.RollBack();
         }
     }
+    public synchronized void SaveAccount(Account acc) {
+        DbSource dbsrc = SATObjFactory.GetDbSource();
+        String sql = "select Faddress from " + dbsrc.GetDBName() + "t_account where Faddress ='";
+        sql += acc.address;
+        sql += "'";
+        DataDB.m_DBConnet.Begin();
+        DataSet dt = new DataSet(DataDB.m_DBConnet);
+        try {
+            if (!dt.Init(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "open db error");
+            if (dt.Query()) {
+                dt.Close();
+                sql = "update " + dbsrc.GetDBName() + "t_account set Fbalance=";
+                sql += acc.balance;
+                sql += " where Faddress = '";
+                sql += acc.address;
+                sql += "'";
+                if (!dt.excAffect(sql, 1)) {
+                    log.error("error sql:" + sql);
+                    throw new SatException(ErrCode.DB_INSERT_ERROR, "update amount to db error");
+                }
+                DataDB.m_DBConnet.Commit();
+                return;
+            }
+            dt.Close();
+            sql = "insert into " + dbsrc.GetDBName() + "t_account(Faddress, Fbalance)values('";
+            sql += acc.address;
+            sql += "', ";
+            sql += acc.balance;
+            sql += ")";
+            if (!dt.excAffect(sql, 1)) throw new SatException(ErrCode.DB_INSERT_ERROR, "insert account to db error");
+            DataDB.m_DBConnet.Commit();
+        } catch (Exception e) {
+            log.error(e);
+            DataDB.m_DBConnet.RollBack();
+        } finally {
+            //dt.Close();
+        }
+    }
     public synchronized void SaveBlock(Block blk, int dbtype) throws SatException, SQLException {
-        synchronized (this) {
-            int storagetype = SystemProperties.getDefault().getDbtype();
-            if (storagetype == DataBase.SMARTX_STORAGETYPE_MYSQL) {
-                if (blk.header.btype == Block.BLKType.SMARTX_MAIN || blk.header.btype == Block.BLKType.SMARTX_MAINREF) {
-                    SaveMainBlock_mysql(blk, dbtype);
-                } else if (blk.header.btype == Block.BLKType.SMARTX_TXS) {
-                    SaveTxBlock_mysql(blk, dbtype);
-                }
-            } else if (storagetype == DataBase.SMARTX_STORAGETYPE_SQLITE) {
-                if (blk.header.btype == Block.BLKType.SMARTX_MAIN || blk.header.btype == Block.BLKType.SMARTX_MAINREF) {
-                    SaveMainBlock(blk, dbtype);
-                } else if (blk.header.btype == Block.BLKType.SMARTX_TXS) {
-                    SaveTxBlock(blk, dbtype);
-                }
+        int storagetype = SystemProperties.getDefault().getDbtype();
+        if (storagetype == DataBase.SMARTX_STORAGETYPE_MYSQL) {
+            if (blk.header.btype == Block.BLKType.SMARTX_MAIN || blk.header.btype == Block.BLKType.SMARTX_MAINREF) {
+                SaveMainBlock_mysql(blk, dbtype);
+            } else if (blk.header.btype == Block.BLKType.SMARTX_TXS) {
+                SaveTxBlock_mysql(blk, dbtype);
+            }
+        } else if (storagetype == DataBase.SMARTX_STORAGETYPE_SQLITE) {
+            if (blk.header.btype == Block.BLKType.SMARTX_MAIN || blk.header.btype == Block.BLKType.SMARTX_MAINREF) {
+                SaveMainBlock(blk, dbtype);
+            } else if (blk.header.btype == Block.BLKType.SMARTX_TXS) {
+                SaveTxBlock(blk, dbtype);
             }
         }
     }
-    public synchronized int SaveBlockHeader(Block blk, int dbtype) throws SatException, SQLException {
+    public int SaveBlockHeader(Block blk, int dbtype) throws SatException {
         assert (!blk.header.hash.equals(""));
-        synchronized (this) {
-            SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            DbSource dbsrc = SATObjFactory.GetDbSource();
-            DataSet dt = new DataSet(DataDB.m_DBConnet);
-            String sql = "select Fhash from " + dbsrc.GetDBName();
-            if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_order where fhash ='";
-            else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH) sql += "t_waitorder where fhash ='";
-            sql += blk.header.hash;
-            sql += "'";
-            try {
-                if (!dt.Init(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "open db error");
-                if (dt.Query()) return 1;
-                dt.Close();
-                blk.recvtime = Tools.TimeStamp2DateEx((new Date()).getTime());
-                sql = BlockHeaderSql(blk, dbtype);
-                if (!dt.excAffect(sql, 1)) {
-                    log.error(" error sql:" + sql);
-                    throw new SatException(ErrCode.DB_INSERT_ERROR, "insert block to t_order error");
-                }
-            } catch (SatException e) {
-                e.printStackTrace();
-                throw e;
-            } finally {
-                dt.Close();
+        //synchronized (this) {
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        DbSource dbsrc = SATObjFactory.GetDbSource();
+        DataSet dt = new DataSet(DataDB.m_DBConnet);
+        String sql = "select Fhash from " + dbsrc.GetDBName();
+        if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_order where fhash ='";
+        else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH) sql += "t_waitorder where fhash ='";
+        sql += blk.header.hash;
+        sql += "'";
+        try {
+            if (!dt.Init(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "open db error");
+            if (dt.Query()) return 1;
+            dt.Close();
+            blk.recvtime = Tools.TimeStamp2DateEx((new Date()).getTime());
+            sql = BlockHeaderSql(blk, dbtype);
+            if (!dt.excAffect(sql, 1)) {
+                log.error(" error sql:" + sql);
+                throw new SatException(ErrCode.DB_INSERT_ERROR, "insert block to t_order error");
             }
+        } catch (SatException e) {
+            e.printStackTrace();
+            throw e;
+        } finally {
+            dt.Close();
         }
+        //}
         return 0;
     }
     public int SaveBlockReferTx(Block blk, String refhash, String time, int dbtype) throws SatException {
-        synchronized (this) {
-            DataSet dt = new DataSet(DataDB.m_DBConnet);
-            DbSource dbsrc = SATObjFactory.GetDbSource();
-            String sql = "select Fmhash from " + dbsrc.GetDBName();
-            if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_reftx where Fmhash ='";
-            else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH) sql += "t_waitreftx where Fmhash ='";
+        //synchronized (this) {
+        DataSet dt = new DataSet(DataDB.m_DBConnet);
+        DbSource dbsrc = SATObjFactory.GetDbSource();
+        String sql = "select Fmhash from " + dbsrc.GetDBName();
+        if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_reftx where Fmhash ='";
+        else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH) sql += "t_waitreftx where Fmhash ='";
+        sql += blk.header.hash;
+        sql += "' and ftxhash = '";
+        sql += refhash;
+        sql += "'";
+        try {
+            if (!dt.Init(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "open db error");
+            if (dt.Query()) return 1;
+            dt.Close();
+            sql = "insert into " + dbsrc.GetDBName();
+            if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_reftx(Fmhash, ftxhash, ftime";
+            else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH) sql += "t_waitreftx(Fmhash, ftxhash, ftime";
+            sql += ")values('";
             sql += blk.header.hash;
-            sql += "' and ftxhash = '";
+            sql += "', '";
             sql += refhash;
-            sql += "'";
-            try {
-                if (!dt.Init(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "open db error");
-                if (dt.Query()) return 1;
-                dt.Close();
-                sql = "insert into " + dbsrc.GetDBName();
-                if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_reftx(Fmhash, ftxhash, ftime";
-                else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH) sql += "t_waitreftx(Fmhash, ftxhash, ftime";
-                sql += ")values('";
-                sql += blk.header.hash;
-                sql += "', '";
-                sql += refhash;
-                sql += "', '";
-                sql += Tools.TimeStamp2DateEx(System.currentTimeMillis());
-                sql += "')";
-                if (!dt.excAffect(sql, 1)) {
-                    log.error("error sql:" + sql);
-                    throw new SatException(ErrCode.DB_INSERT_ERROR, "insert block to t_reftx error");
-                }
-            } catch (SatException e) {
-                throw e;
-            } finally {
-                dt.Close();
+            sql += "', '";
+            sql += Tools.TimeStamp2DateEx(System.currentTimeMillis());
+            sql += "')";
+            if (!dt.excAffect(sql, 1)) {
+                log.error("error sql:" + sql);
+                throw new SatException(ErrCode.DB_INSERT_ERROR, "insert block to t_reftx error");
             }
+        } catch (SatException e) {
+            throw e;
+        } finally {
+            dt.Close();
         }
+        //}
         return 0;
     }
-    public synchronized int SaveField(Block blk, String inhash, String outhash, BigInteger amount, int dbtype) throws SatException, SQLException {
+    public int SaveField(Block blk, String inhash, String outhash, BigInteger amount, int dbtype) throws SatException {
         DataSet dt = new DataSet(DataDB.m_DBConnet);
         DbSource dbsrc = SATObjFactory.GetDbSource();
         String sql = "select fnonce from " + dbsrc.GetDBName();
@@ -396,15 +542,15 @@ public class TransDB extends DataDB {
         }
         return 0;
     }
-    public synchronized void GetFields(String nonce, FieldItem fdb, int dbtype, Block blk) throws SatException, SQLException {
+    public void GetFields(String nonce, FieldItem fdb, int dbtype, Block blk) throws SatException, SQLException {
         DataSet dt = new DataSet(DataDB.m_DBConnet);
+        DbSource dbsrc = SATObjFactory.GetDbSource();
+        String sql = "select Finhash, Fouthash, famount, ftime, fnonce from " + dbsrc.GetDBName();
+        if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_fields where fnonce='";
+        else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH) sql += "t_waitfields where fnonce='";
+        sql += nonce;
+        sql += "'";
         try {
-            DbSource dbsrc = SATObjFactory.GetDbSource();
-            String sql = "select Finhash, Fouthash, famount, ftime, fnonce from " + dbsrc.GetDBName();
-            if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_fields where fnonce='";
-            else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH) sql += "t_waitfields where fnonce='";
-            sql += nonce;
-            sql += "'";
             if (!dt.Init(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "query db error");
             while (!dt.IsEnd()) {
                 fdb.inhash = dt.rs.getString("Finhash");
@@ -422,7 +568,7 @@ public class TransDB extends DataDB {
             dt.Close();
         }
     }
-    public synchronized ArrayList<String> GetReferHashs(Block blk, int dbtype) throws SatException, SQLException {
+    public ArrayList<String> GetReferHashs(Block blk, int dbtype) throws SatException, SQLException {
         assert (!blk.header.hash.equals(""));
         DbSource dbsrc = SATObjFactory.GetDbSource();
         ArrayList<String> arrs = new ArrayList<String>();
@@ -454,105 +600,103 @@ public class TransDB extends DataDB {
         ArrayList<Block> blks = new ArrayList<Block>();
         hashs.clear();
         blks.clear();
-        synchronized (this) {
-            try {
-                DbSource dbsrc = SATObjFactory.GetDbSource();
-                String sql = "";
-                if (dbsrc.GetDBType() == 0) {
-                    sql += "select * from (select * from smartx_db.t_order union all (select * from smartx_db.t_waitorder as a)) as b";
-                } else {
-                    sql += "select * from (select * from t_order union all select * from t_waitorder ) ";
-                }
-                sql += " where fheight=" + height;
-                sql += " and fbtype in (1,2)";
-                if (!dt.Init(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "open db error");
-                while (!dt.IsEnd()) hashs.add(dt.rs.getString("Fhash"));
-                dt.Close();
-                for (int i = 0; i < hashs.size(); i++) {
-                    Block blk = GetBlock(hashs.get(i), GetDbtype(hashs.get(i)));
-                    blks.add(blk);
-                }
-                return blks;
-            } catch (SatException e) {
-                throw e;
-            } catch (SQLException e) {
-                throw e;
-            } finally {
-                dt.Close();
+        try {
+            DbSource dbsrc = SATObjFactory.GetDbSource();
+            String sql = "";
+            if (dbsrc.GetDBType() == 0) {
+                sql += "select fhash from smartx_db.t_order";
+            } else {
+                sql += "select * from (select * from t_order union all select * from t_waitorder ) ";
             }
+            sql += " where fheight=" + height;
+            sql += " and fbtype in (1,2)";
+            if (!dt.Init(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "open db error");
+            while (!dt.IsEnd()) hashs.add(dt.rs.getString("Fhash"));
+            dt.Close();
+            for (int i = 0; i < hashs.size(); i++) {
+                Block blk = GetBlock(hashs.get(i), DataBase.SMARTX_BLOCK_HISTORY);
+                blks.add(blk);
+            }
+            return blks;
+        } catch (SatException e) {
+            throw e;
+        } catch (SQLException e) {
+            throw e;
+        } finally {
+            dt.Close();
         }
     }
-    public synchronized ArrayList<Block> GetAllHeight(long height, int dbtype) throws SatException, SQLException {
+    public ArrayList<Block> GetAllHeight(long height, int dbtype) throws SatException, SQLException {
         DataSet dt = new DataSet(DataDB.m_DBConnet);
         ArrayList<String> hashs = new ArrayList<String>();
         ArrayList<Block> blks = new ArrayList<Block>();
         hashs.clear();
         blks.clear();
-        synchronized (this) {
-            try {
-                DbSource dbsrc = SATObjFactory.GetDbSource();
-                String sql = "select Fhash from " + dbsrc.GetDBName();
-                if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_order where";
-                else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH) sql += "t_waitorder where";
-                sql += " fheight =";
-                sql += height;
-                if (!dt.Init(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "open db error");
-                while (!dt.IsEnd()) hashs.add(dt.rs.getString("Fhash"));
-                dt.Close();
-                for (int i = 0; i < hashs.size(); i++) {
-                    Block blk = GetBlock(hashs.get(i), dbtype);
-                    if (null != blk) blks.add(blk);
-                }
-                return blks;
-            } catch (SatException e) {
-                throw e;
-            } catch (SQLException e) {
-                throw e;
-            } finally {
-                dt.Close();
+        try {
+            DbSource dbsrc = SATObjFactory.GetDbSource();
+            String sql = "select Fhash from " + dbsrc.GetDBName();
+            if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_order where";
+            else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH) sql += "t_waitorder where";
+            sql += " fheight =";
+            sql += height;
+            if (!dt.Init(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "open db error");
+            while (!dt.IsEnd()) hashs.add(dt.rs.getString("Fhash"));
+            dt.Close();
+            for (int i = 0; i < hashs.size(); i++) {
+                Block blk = GetBlock(hashs.get(i), dbtype);
+                if (null != blk) blks.add(blk);
             }
+            return blks;
+        } catch (SatException e) {
+            throw e;
+        } catch (SQLException e) {
+            throw e;
+        } finally {
+            dt.Close();
         }
     }
-    public synchronized int GetDbtype(Block blk) throws SatException, SQLException {
+    public int GetDbtype(Block blk) throws SatException, SQLException {
         return GetDbtype(blk.header.hash);
     }
-    public synchronized int GetDbtype(String hash) throws SatException, SQLException {
+    public int GetDbtype(String hash) throws SatException, SQLException {
         DbSource dbsrc = SATObjFactory.GetDbSource();
-        String sql = "select count(*) a from " + dbsrc.GetDBName() + "t_waitorder where fhash='";
+        String sql = "select count(*) a from " + dbsrc.GetDBName() + "t_order where fhash='";
         sql += hash;
         sql += "'";
         if (0 == Integer.parseInt(GetLine(sql))) return DataBase.SMARTX_BLOCK_HISTORY;
-        return DataBase.SMARTX_BLOCK_EPOCH;
+        return DataBase.SMARTX_BLOCK_HISTORY;
     }
     public synchronized void SaveRuleSign(Block blk, int dbtype) throws SatException {
         if (null == blk) return;
-        synchronized (this) {
-            DataSet dt = new DataSet(DataDB.m_DBConnet);
-            try {
-                Block tmpblk = GetBlock(blk.header.hash, GetDbtype(blk));
-                if (tmpblk != null && tmpblk.ruleSigns != null && tmpblk.ruleSigns.size() > 0) return;
-                DbSource dbsrc = SATObjFactory.GetDbSource();
-                TransDB txdb = SATObjFactory.GetTxDB();
-                String rulesign = Tools.ToRuleSignListByList(blk.ruleSigns);
-                String sql = "update " + dbsrc.GetDBName();
-                if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += " t_order ";
-                else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH) sql += " t_waitorder ";
-                sql += " set Frulesign = '" + rulesign;
-                sql += "', Fheight =" + blk.height;
-                sql += " where Fhash='";
-                sql += blk.header.hash;
-                sql += "'";
-                if (!dt.excute(sql)) throw new SatException(ErrCode.DB_INSERT_ERROR, "insert db error");
-            } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
-                dt.Close();
-            }
-        }
-    }
-    public synchronized void SaveHeight(Block blk, int dbtype) throws SatException {
+        DataDB.m_DBConnet.Begin();
         DataSet dt = new DataSet(DataDB.m_DBConnet);
         try {
+            Block tmpblk = GetBlock(blk.header.hash, DataBase.SMARTX_BLOCK_HISTORY);
+            if (tmpblk != null && tmpblk.ruleSigns != null && tmpblk.ruleSigns.size() > 0) return;
+            DbSource dbsrc = SATObjFactory.GetDbSource();
+            TransDB txdb = SATObjFactory.GetTxDB();
+            String rulesign = Tools.ToRuleSignListByList(blk.ruleSigns);
+            String sql = "update " + dbsrc.GetDBName();
+            if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += " t_order ";
+            else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH) sql += " t_waitorder ";
+            sql += " set Frulesign = '" + rulesign;
+            sql += "', Fheight =" + blk.height;
+            sql += " where Fhash='";
+            sql += blk.header.hash;
+            sql += "'";
+            if (!dt.excAffect(sql, 1)) throw new SatException(ErrCode.DB_INSERT_ERROR, "insert db error");
+            DataDB.m_DBConnet.Commit();
+        } catch (Exception e) {
+            e.printStackTrace();
+            DataDB.m_DBConnet.RollBack();
+        } finally {
+            dt.Close();
+        }
+    }
+    public void SaveHeight(Block blk, int dbtype) throws SatException {
+        DataSet dt = new DataSet(DataDB.m_DBConnet);
+        try {
+            DataDB.m_DBConnet.Begin();
             DbSource dbsrc = SATObjFactory.GetDbSource();
             String sql = "update " + dbsrc.GetDBName();
             if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += " t_order set Fheight = ";
@@ -562,32 +706,32 @@ public class TransDB extends DataDB {
             sql += blk.header.hash;
             sql += "'";
             if (!dt.excute(sql)) throw new SatException(ErrCode.DB_INSERT_ERROR, "update height error");
+            DataDB.m_DBConnet.Commit();
         } catch (Exception e) {
             e.printStackTrace();
+            DataDB.m_DBConnet.RollBack();
             throw e;
         } finally {
             dt.Close();
         }
     }
     public boolean GetBackRefer(Block refblock, int dbtype) throws SatException {
-        synchronized (this) {
-            DataSet dt = new DataSet(DataDB.m_DBConnet);
-            DbSource dbsrc = SATObjFactory.GetDbSource();
-            String sql = "select Fmhash from " + dbsrc.GetDBName();
-            if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_reftx where Ftxhash ='";
-            else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH) sql += "t_waitreftx where Ftxhash ='";
-            sql += refblock.header.hash;
-            sql += "'";
-            try {
-                if (!dt.Init(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "open db error");
-                if (dt.Query()) return true;
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return false;
+        DataSet dt = new DataSet(DataDB.m_DBConnet);
+        DbSource dbsrc = SATObjFactory.GetDbSource();
+        String sql = "select Fmhash from " + dbsrc.GetDBName();
+        if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_reftx where Ftxhash ='";
+        else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH) sql += "t_waitreftx where Ftxhash ='";
+        sql += refblock.header.hash;
+        sql += "'";
+        try {
+            if (!dt.Init(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "open db error");
+            if (dt.Query()) return true;
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+        return false;
     }
-    public synchronized void SaveBackRefer(String hashref, String hash, int dbtype) throws SatException, SQLException {
+    public void SaveBackRefer(String hashref, String hash, int dbtype) throws SatException, SQLException {
         DataSet dt = new DataSet(DataDB.m_DBConnet);
         try {
             DbSource dbsrc = SATObjFactory.GetDbSource();
@@ -659,7 +803,7 @@ public class TransDB extends DataDB {
                 String sql = "select fhash, ftime, fnonce, fnum, fbtype, fdiff, fnodename, Frecv_time, Fmerkle_hash, Frulesign, " + "Fheight, faddress, Ftimestamp, Frandom, Fecsign, Frefhash from " + dbsrc.GetDBName();
                 if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_order ";
                 else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH) sql += "t_waitorder ";
-                sql += "where fheight=" + height + " and fbtype in (1,2) order by ftime desc";
+                sql += "where fheight=" + height + " and fbtype in (1,2)";
                 if (!dt.Init(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "open db error");
                 while (!dt.IsEnd()) {
                     Block blk = new Block();
@@ -700,9 +844,9 @@ public class TransDB extends DataDB {
             }
         }
     }
-    public synchronized ArrayList<Block> GetBlockHashBack(String hash, int dbtype) throws SatException, SQLException {
+    public List<Block> GetBlockHashBack(String hash, int dbtype) throws SatException, SQLException {
         DataSet dt = new DataSet(DataDB.m_DBConnet);
-        ArrayList<Block> mblocks = new ArrayList<Block>();
+        List<Block> mblocks = new ArrayList<Block>();
         try {
             String sql = "select fmhash from ";
             if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_reftx where ftxhash = '";
@@ -726,7 +870,7 @@ public class TransDB extends DataDB {
             dt.Close();
         }
     }
-    public synchronized Block GetNextRealMC(Block MC, int dbtype) throws SatException, SQLException, SignatureException {
+    public Block GetNextRealMC(Block MC, int dbtype) throws SatException, SQLException, SignatureException {
         RuleExecutor executor = SATObjFactory.GetExecutor();
         TraverBlock tvblock = SATObjFactory.GetTravBlock();
         DataSet dt = new DataSet(DataDB.m_DBConnet);
@@ -757,7 +901,7 @@ public class TransDB extends DataDB {
             dt.Close();
         }
     }
-    public synchronized Block GetNextMC(Block MC, int dbtype) {
+    public Block GetNextMC(Block MC, int dbtype) {
         RuleExecutor executor = SATObjFactory.GetExecutor();
         TraverBlock tvblock = SATObjFactory.GetTravBlock();
         DataSet dt = new DataSet(DataDB.m_DBConnet);
@@ -784,7 +928,7 @@ public class TransDB extends DataDB {
             dt.Close();
         }
     }
-    public synchronized String GetGenesisBlockHash(String genesishash) throws SatException, SQLException {
+    public String GetGenesisBlockHash(String genesishash) throws SatException, SQLException {
         DataSet dt = new DataSet(DataDB.m_DBConnet);
         String hash = "";
         try {
@@ -803,40 +947,25 @@ public class TransDB extends DataDB {
         }
         return hash;
     }
-    public synchronized int IsRepeat(Block blk) throws SatException, SQLException {
+    public int IsRepeat(Block blk){
         TransDB smartxdb = SATObjFactory.GetTxDB();
         Block tmpblk = null;
-        if (DataBase.SMARTX_BLOCK_EPOCH != smartxdb.GetDbtype(blk.header.hash)) {
-            tmpblk = smartxdb.GetBlock(blk.header.hash, DataBase.SMARTX_BLOCK_HISTORY);
-            if (null != tmpblk) return 1073;
-            else return 0;
-        }
-        return 1073;
+        tmpblk = smartxdb.GetBlock(blk.header.hash, DataBase.SMARTX_BLOCK_HISTORY);
+        if (null != tmpblk) return 1073;
+        else return 0;
     }
-    public synchronized Block GetLatestMC() throws SignatureException {
+    public Block GetLatestMC() throws SignatureException {
         DbSource dbsrc = SATObjFactory.GetDbSource();
         RuleExecutor executor = SATObjFactory.GetExecutor();
         String sql = "select fhash as a from " + dbsrc.GetDBName();
         sql += "t_order where length(Frulesign)>10 order by Fheight desc limit 1";
-        try {
-            String hash = GetLine(sql);
-            Block MC = GetBlock(hash, DataBase.SMARTX_BLOCK_HISTORY);
-            if (MC == null || false == executor.verifyRuleSignBlock(MC)) return null;
-            Block LatestMC = MC;
-            do {
-                MC = GetNextRealMC(MC, DataBase.SMARTX_BLOCK_EPOCH);
-                if (null == MC) return LatestMC;
-                LatestMC = MC;
-            } while (true);
-        } catch (SatException e) {
-            e.printStackTrace();
-            return null;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return null;
-        }
+
+        String hash = GetLine(sql);
+        Block MC = GetBlock(hash, DataBase.SMARTX_BLOCK_HISTORY);
+        if (MC == null || false == executor.verifyRuleSignBlock(MC)) return null;
+        return MC;
     }
-    public synchronized int GetLatestHeight(int dbtype) throws SatException, SQLException {
+    public int GetLatestHeight(int dbtype) throws SatException, SQLException {
         DataSet dt = new DataSet(DataDB.m_DBConnet);
         try {
             DbSource dbsrc = SATObjFactory.GetDbSource();
@@ -857,43 +986,7 @@ public class TransDB extends DataDB {
             dt.Close();
         }
     }
-    public void RemoveBlock(Block blk, int dbtype) throws SQLException, SatException {
-        synchronized (this) {
-            DataSet dt = new DataSet(DataDB.m_DBConnet);
-            Block tmpblk = GetBlock(blk.header.hash, dbtype);
-            if (tmpblk == null) return;
-            if (blk.header.btype == Block.BLKType.SMARTX_MAIN || blk.header.btype == Block.BLKType.SMARTX_MAINREF) {
-                String sql = "delete from ";
-                if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_waitorder where fhash ='";
-                else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH) sql += "t_waitorder where fhash='";
-                sql += blk.header.hash;
-                sql += "'";
-                if (!dt.excute(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "delete db error");
-                sql = "delete from ";
-                if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_waitreftx where fmhash='";
-                else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH) sql += "t_waitreftx where fmhash='";
-                sql += blk.header.hash;
-                sql += "'";
-                if (!dt.excute(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "delete db error");
-            } else if (blk.header.btype == Block.BLKType.SMARTX_TXS) {
-                String sql = "delete from ";
-                if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_waitorder where fhash ='";
-                else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH) sql += "t_waitorder where fhash='";
-                sql += blk.header.hash;
-                sql += "'";
-                if (!dt.excute(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "delete db error");
-                sql = "delete from ";
-                if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_field where fnonce='";
-                else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH) sql += "t_waitfields where fnonce='";
-                sql += blk.header.nonce;
-                sql += "'";
-                if (!dt.excute(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "delete db error");
-            } else {
-                throw new SatException(ErrCode.SAT_UNKNOWN_BLOCKTYPE, "unkonw block type");
-            }
-        }
-    }
-    public synchronized String GetLine(String sql) throws SatException, SQLException {
+    public String GetLine(String sql){
         DataSet dt = new DataSet(DataDB.m_DBConnet);
         try {
             if (!dt.Init(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "");
@@ -903,6 +996,6 @@ public class TransDB extends DataDB {
         } finally {
             dt.Close();
         }
-        return "";
+        return "0";
     }
 }

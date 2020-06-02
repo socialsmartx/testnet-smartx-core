@@ -8,10 +8,10 @@ import java.util.List;
 import org.apache.commons.cli.*;
 import org.apache.log4j.Logger;
 
-import com.smartx.api.TerminalServer;
 import com.smartx.cli.Command;
 import com.smartx.cli.SmartXOption;
 import com.smartx.cli.SmartxTerminal;
+import com.smartx.cli.TerminalServer;
 import com.smartx.config.Constants;
 import com.smartx.config.SystemProperties;
 import com.smartx.config.exception.ConfigException;
@@ -48,7 +48,7 @@ public class SmartXCli extends Launcher {
                 SystemUtil.exit(SystemUtil.Code.JVM_32_NOT_SUPPORTED);
             }
             // system system prerequisites
-            checkPrerequisite();
+            // checkPrerequisite();
             // start CLI
             cli.setupLogger(args);
             cli.start(args);
@@ -195,7 +195,7 @@ public class SmartXCli extends Launcher {
         }
     }
     protected Kernel startKernel(SystemProperties config, Key25519 wallet, Key coinbase) {
-        logger.info("ed25519 base: " + coinbase.toAddressString());
+        logger.info("Ed25519 base: " + coinbase.toAddressString());
         Kernel kernel = new Kernel(config, wallet, coinbase);
         kernel.start();
         return kernel;

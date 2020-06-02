@@ -1,18 +1,13 @@
 package com.smartx.cli;
 
-import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Scanner;
 
 import org.apache.log4j.Logger;
 
-import com.smartx.api.TerminalServer;
-import com.smartx.block.Block;
-import com.smartx.cli.Command;
 import com.smartx.core.blockchain.DataBase;
 import com.smartx.core.blockchain.SATObjFactory;
 import com.smartx.core.blockchain.SatPeerManager;
-import com.smartx.core.consensus.SatException;
 import com.smartx.message.Message;
 import com.smartx.util.Tools;
 
@@ -53,7 +48,6 @@ public class SmartxTerminal {
         if (cmd.equals("")) return;
         SatPeerManager peer = SATObjFactory.GetPeerMgr();
         String rpcclient = PROTOCOL;
-        ;
         rpcclient += DataBase.rpcclient;
         rpcclient += TERMINAL;
         Message message = new Message(cmd);

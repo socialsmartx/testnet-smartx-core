@@ -93,21 +93,21 @@ public class SystemProperties2 {
             config = apiConfig.withFallback(referenceConfig);
             //logger.debug("Config trace: " + config.root().render(ConfigRenderOptions.defaults().setComments(false).setJson(false)));
             config = javaSystemProperties.withFallback(config).resolve();     // substitute variables in config if any
-            List<InputStream> iStreams = loadResources("version.properties", this.getClass().getClassLoader());
-            for (InputStream is : iStreams) {
-                Properties props = new Properties();
-                props.load(is);
-                if (props.getProperty("versionNumber") == null || props.getProperty("databaseVersion") == null) {
-                    continue;
-                }
-                this.projectVersion = props.getProperty("versionNumber");
-                this.projectVersion = this.projectVersion.replaceAll("'", "");
-                if (this.projectVersion == null) this.projectVersion = "-.-.-";
-                this.projectVersionModifier = "master".equals(BuildInfo.buildBranch) ? "RELEASE" : "SNAPSHOT";
-                this.databaseVersion = Integer.valueOf(props.getProperty("databaseVersion"));
-                this.generateNodeIdStrategy = new GetNodeIdFromPropsFile(databaseDir()).withFallback(new GenerateNodeIdRandomly(databaseDir()));
-                break;
-            }
+            //List<InputStream> iStreams = loadResources("version.properties", this.getClass().getClassLoader());
+//            for (InputStream is : iStreams) {
+//                Properties props = new Properties();
+//                props.load(is);
+//                if (props.getProperty("versionNumber") == null || props.getProperty("databaseVersion") == null) {
+//                    continue;
+//                }
+//                this.projectVersion = props.getProperty("versionNumber");
+//                this.projectVersion = this.projectVersion.replaceAll("'", "");
+//                if (this.projectVersion == null) this.projectVersion = "-.-.-";
+//                this.projectVersionModifier = "master".equals(BuildInfo.buildBranch) ? "RELEASE" : "SNAPSHOT";
+//                this.databaseVersion = Integer.valueOf(props.getProperty("databaseVersion"));
+//                this.generateNodeIdStrategy = new GetNodeIdFromPropsFile(databaseDir()).withFallback(new GenerateNodeIdRandomly(databaseDir()));
+//                break;
+//            }
         } catch (Exception e) {
             logger.error("Can't read config.", e);
             throw new RuntimeException(e);

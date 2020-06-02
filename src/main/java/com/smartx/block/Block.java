@@ -26,19 +26,16 @@ public class Block {
     public long epoch = 0L;
     public long timenum = 0;
     public long height = 0;
+    public int status = DataBase.NOBROADCAST;
     public String diff = "";
-    public int epochtype = 100;
     public String blackrefer = "";
     public String nodename = "node1";
     public String recvtime = "";
-    public int status = 0;
-    public int src = DataBase.SMARTX_BLOCK_EPOCH;
     public String mkl_hash = "";
     public String premkl_hash = "";
     public List<Field> Flds = new ArrayList<Field>();
     public String sign = "";
     public List<RuleSign> ruleSigns = null;
-    public transient boolean bmove = false;
     public Block() {
     }
     public String ToSignString() {
@@ -92,8 +89,6 @@ public class Block {
     }
     public synchronized byte[] toBytes(boolean withHash) {
         SimpleEncoder enc = new SimpleEncoder();
-        //enc.writeBytes(getEncodedHeader());
-        //enc.writeBytes(getEncodeVotes());
         return enc.toBytes();
     }
 }

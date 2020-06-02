@@ -36,7 +36,7 @@ public class SyncRequester {
     public void wakeUp(ChannelHandlerContext ctx, Message msg) throws SyncRequesterException {
         //如果没有开启等待，则抛出异常
         if (this.promise == null) {
-            logger.warn(String.format("receive message from remote {}:{}, sync request is not awaiting", ctx.channel().remoteAddress()));
+            logger.warn(String.format("receive message from remote {%s}, sync request is not awaiting", ctx.channel().remoteAddress()));
             //throw (new SyncRequesterException("sync request is not awaiting")); by sxh
             return;
         }

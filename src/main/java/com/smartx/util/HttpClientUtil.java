@@ -51,6 +51,34 @@ public class HttpClientUtil {
         }
         return null;
     }
+    private static String httpClientPostCall(String allUrl, int connectTimeout, int readTimeout, String charset) throws KeyManagementException, NoSuchAlgorithmException, NoSuchProviderException, IOException {
+        URL url = new URL(allUrl);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        if (connection instanceof HttpsURLConnection) {
+            ((HttpsURLConnection) connection).setSSLSocketFactory(getSimpleSSLSocketFactory());
+        }
+        connection.setDoOutput(true);
+        connection.setRequestMethod("POST");
+        connection.setConnectTimeout(connectTimeout);
+        connection.setReadTimeout(readTimeout);
+        connection.getResponseCode();
+        return readContents(connection, charset);
+    }
+    public static String httpClientPost(String allUrl, int connectTimeout, String charset) {
+        try {
+            String ret = null;
+            String readTimeout_s = "10000";//StringUtils.trimToNull(ReloadableAppConfig.appConfig.get("notify_readtimeout"));
+            int readTimeout = 8000;    // 超时时间2s
+            if (readTimeout_s != null) {
+                readTimeout = Integer.valueOf(readTimeout_s);
+            }
+            ret = httpClientPostCall(allUrl, connectTimeout, readTimeout, charset);
+            return ret;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
     /**
      @param allUrl
      @param connectTimeout

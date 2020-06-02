@@ -78,7 +78,7 @@ public class SmartXApiService {
             bossGroup = new NioEventLoopGroup(1, factory);
             workerGroup = new NioEventLoopGroup(0, factory);
             ServerBootstrap b = new ServerBootstrap();
-            b.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class).handler(new LoggingHandler(LogLevel.INFO)).childHandler(new HttpChannelInitializer() {
+            b.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class).handler(new LoggingHandler(LogLevel.DEBUG)).childHandler(new HttpChannelInitializer() {
                 public HttpHandler initHandler() {
                     return new HttpHandler(kernel, apiHandler);
                 }

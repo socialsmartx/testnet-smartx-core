@@ -1,6 +1,7 @@
 package com.smartx.db;
 
 import java.math.BigInteger;
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
@@ -13,19 +14,20 @@ import com.smartx.core.consensus.SatException;
 
 public class AccountDB extends DataDB {
     private static final Logger logger = Logger.getLogger("AccountDB");
-    public synchronized Account CreateAccount(final String address) throws SatException {
-        final Account acc = new Account();
+    public synchronized Account CreateAccount(String address) throws SatException, SQLException {
+        Account acc = new Account();
         acc.balance = new BigInteger("0");
         acc.address = address;
         SaveAccount(acc);
         return acc;
     }
-    public synchronized void SaveAccount(final Account acc) throws SatException {
-        final DataSet dt = new DataSet(DataDB.m_DBConnet);
-        final DbSource dbsrc = SATObjFactory.GetDbSource();
+    public synchronized void SaveAccount(Account acc) throws SatException, SQLException {
+        DbSource dbsrc = SATObjFactory.GetDbSource();
         String sql = "select Faddress from " + dbsrc.GetDBName() + "t_account where Faddress ='";
         sql += acc.address;
         sql += "'";
+        Connection c = DataDB.DBPools.getConnection();
+        DataSet dt = new DataSet(new DBConnection(c));
         try {
             if (!dt.Init(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "open db error");
             if (dt.Query()) {
@@ -48,10 +50,11 @@ public class AccountDB extends DataDB {
             sql += acc.balance;
             sql += ")";
             if (!dt.excAffect(sql, 1)) throw new SatException(ErrCode.DB_INSERT_ERROR, "insert account to db error");
-        } catch (final SatException e) {
-            throw e;
+        } catch (Exception e) {
+            logger.error(e);
         } finally {
             dt.Close();
+            DataDB.DBPools.ReleaseConnection(c);
         }
     }
     public synchronized ArrayList<Account> GetAllAccount() throws SatException, SQLException {
@@ -62,7 +65,7 @@ public class AccountDB extends DataDB {
             if (!dt.Init(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "open db error");
             final ArrayList<Account> accs = new ArrayList<Account>();
             while (!dt.IsEnd()) {
-                final Account acc = new Account();
+                Account acc = new Account();
                 acc.balance = new BigInteger(dt.rs.getString("Fbalance"));
                 acc.address = dt.rs.getString("Faddress");
                 accs.add(acc);
@@ -74,7 +77,7 @@ public class AccountDB extends DataDB {
             throw e;
         }
     }
-    public synchronized Account GetAccount(final String address) throws SatException, SQLException {
+    public synchronized Account GetAccount(String address) throws SatException, SQLException {
         final DataSet dt = new DataSet(DataDB.m_DBConnet);
         try {
             final DbSource dbsrc = SATObjFactory.GetDbSource();
@@ -83,12 +86,13 @@ public class AccountDB extends DataDB {
             sql += "'";
             if (!dt.Init(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "open db error");
             while (!dt.IsEnd()) {
-                final Account acc = new Account();
+                Account acc = new Account();
                 acc.balance = new BigInteger(dt.rs.getString("Fbalance"));
                 acc.address = dt.rs.getString("Faddress");
                 return acc;
             }
-        } catch (final Exception e) {
+        } catch (Exception e) {
+            e.printStackTrace();
             throw e;
         } finally {
             dt.Close();
@@ -96,13 +100,16 @@ public class AccountDB extends DataDB {
         return null;
     }
     public synchronized void SetZero() throws SatException, SQLException {
-        final DataSet dt = new DataSet(DataDB.m_DBConnet);
+        DataSet dt = new DataSet(DataDB.m_DBConnet);
         try {
-            final DbSource dbsrc = SATObjFactory.GetDbSource();
-            final String sql = "update " + dbsrc.GetDBName() + "t_account set Fbalance = 0";
+            DataDB.m_DBConnet.Begin();
+            DbSource dbsrc = SATObjFactory.GetDbSource();
+            String sql = "update " + dbsrc.GetDBName() + "t_account set Fbalance = 0";
             if (!dt.excute(sql)) throw new SatException(ErrCode.DB_UPDATE_ERROR, "update db error");
             dt.Close();
-        } catch (final SatException e) {
+            DataDB.m_DBConnet.Commit();
+        } catch (SatException e) {
+            DataDB.m_DBConnet.RollBack();
             throw e;
         } finally {
             dt.Close();

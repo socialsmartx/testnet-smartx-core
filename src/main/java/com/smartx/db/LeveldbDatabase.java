@@ -19,6 +19,7 @@ import java.util.Map.Entry;
 import org.apache.commons.lang3.tuple.Pair;
 import org.fusesource.leveldbjni.JniDBFactory;
 import org.iq80.leveldb.*;
+import org.junit.Test;
 
 import com.smartx.util.ClosableIterator;
 import com.smartx.util.FileUtil;

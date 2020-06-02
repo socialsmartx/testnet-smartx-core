@@ -40,6 +40,7 @@ public class Message {
     public static final String SETCOINBASE = "setcoinbase";
     public static final String GETCOINBASE = "getcoinbase";
     public static final String MAIN = "main";
+    public static final String HELP = "help";
     public Map<String, String> args = null;
     public Map<String, String> data = null;
     public MCollection collection = null;
