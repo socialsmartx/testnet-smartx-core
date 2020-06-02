@@ -4,15 +4,14 @@ import java.security.SignatureException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.junit.Test;
 import org.web3j.utils.Numeric;
 
-import com.smartx.api.TerminalServer;
 import com.smartx.block.Block;
+import com.smartx.cli.TerminalServer;
 import com.smartx.config.SystemProperties;
 import com.smartx.core.SmartxCore;
 import com.smartx.core.blockchain.*;
@@ -30,16 +29,16 @@ import com.smartx.util.Tools;
 public class RuleThread implements Runnable {
     private static Logger logger = Logger.getLogger(RuleThread.class);
     public static long G_FRAME = 1000 / 30;
+    public static Block G_MaxDiffBlock = null;
     public SystemProperties config = SystemProperties.getDefault();
-    public HashMap<Integer, Block> hashMap = new HashMap<>();
+    protected TraverBlock tvblock = SATObjFactory.GetTravBlock();
+    protected BlockMainTop top = SATObjFactory.GetMainTop();
+    protected TransDB txdb = SATObjFactory.GetTxDB();
+    protected RuleExecutor executor = SATObjFactory.GetExecutor();
     void DoResumeRuleTop() throws SignatureException {
-        TransDB smartxdb = SATObjFactory.GetTxDB();
-        RuleExecutor executor = SATObjFactory.GetExecutor();
-        BlockMainTop top = SATObjFactory.GetMainTop();
         if (SmartxCore.G_INSTANCE == false) {
-            Block blk = smartxdb.GetLatestMC();
-            top.SetTopBlock(blk);
-            top.SetMCTopBlock(blk);
+            Block blk = txdb.GetLatestMC();
+            top.SetMCBlock(blk);
             SmartxCore.G_INSTANCE = true;
         }
     }
@@ -57,32 +56,24 @@ public class RuleThread implements Runnable {
         return false;
     }
     public long GetLastHeight(BlockMainTop top) throws SatException {
-        Block topblk = top.GetTopBlock();
+        Block topblk = top.GetMCBlock();
         if (topblk == null) throw new SatException(ErrCode.SAT_CHECKHEIGHT_ERROR, "the height is null");
         return topblk.height;
     }
     public List<Block> GetBackMCRefer(Block MC) throws SatException, SQLException {
-        TraverBlock tvblock = SATObjFactory.GetTravBlock();
-        ArrayList<Block> blocks = tvblock.GetBackBlocks(MC, DataBase.SMARTX_BLOCK_EPOCH);
+        List<Block> blocks = txdb.GetBlockHashBack(MC.header.hash, DataBase.SMARTX_BLOCK_HISTORY);
         if (blocks == null || blocks.size() == 0) {
             throw new SatException(ErrCode.SAT_RULEBACKERFER_ERROR, "can't find the block of backrefer mc");
         }
         return blocks;
     }
     public void SignMaxDiffBlock(Block blk, long height) throws SignatureException, SatException {
-        RuleExecutor executor = SATObjFactory.GetExecutor();
-        TransDB smartxdb = SATObjFactory.GetTxDB();
         blk = executor.ruleSignBlock(blk);
         blk.height = ++height;
-        if (executor.verifyRuleSignBlock(blk)) logger.info(" rulesign is ok");
-        smartxdb.SaveRuleSign(blk, DataBase.SMARTX_BLOCK_EPOCH);
+        if (executor.verifyRuleSignBlock(blk)) logger.info(" height:" + blk.height + " node:" + blk.nodename + " rulesign is ok");
+        txdb.SaveRuleSign(blk, DataBase.SMARTX_BLOCK_HISTORY);
     }
     public void run() {
-        RuleExecutor executor = SATObjFactory.GetExecutor();
-        TransDB smartxdb = SATObjFactory.GetTxDB();
-        TraverBlock tvblock = SATObjFactory.GetTravBlock();
-        BlockMainTop top = SATObjFactory.GetMainTop();
-        BlockCache cache = SATObjFactory.GetCache();
         MessageHandle msghandle = SATObjFactory.GetMessageHandle();
         Block blk = null;
         long height = 0;
@@ -94,19 +85,23 @@ public class RuleThread implements Runnable {
                 long tm = System.currentTimeMillis();
                 String timeStamp = Tools.TimeStamp2DateEx(tm);
                 int time = Integer.parseInt(timeStamp.substring(17)) % (SmartxEpochTime.MAIN_CHAIN_PERIOD / 1000);
-                if (time > SmartxEpochTime.G_STARTS[1]) {
-                    // cache.RefreshCache();
-                }
-                if (time > SmartxEpochTime.RULESIGN_TIME) {
-                    blk = top.GetTopBlock();
+                if (time >= SmartxEpochTime.RULESIGN_TIME) {
+                    blk = top.GetMCBlock();
                     height = GetLastHeight(top);
+                    // get backref of main block
                     List<Block> blocks = GetBackMCRefer(blk);
+                    // check refer block
                     tagblocks = tvblock.SelectAvailableBlock(blocks);
-                    tvblock.CoordinateMCs(tagblocks, hashMap);
-                    blk = hashMap.get((int) tagblocks.get(0).timenum);
+                    tvblock.CoordinateMCs2(tagblocks);
+                    blk = G_MaxDiffBlock;
+                    for (int i=0; i<tagblocks.size(); i++){
+                        logger.info(String.format(" [%s]", tagblocks.get(i).header.hash));
+                    }
+                    logger.info(String.format(" maxdiff [%s]", G_MaxDiffBlock.header.hash));
                     SignMaxDiffBlock(blk, height);
                     msghandle.BroadCastMBlock(blk);
-                    SATObjFactory.GetMainTop().SetTopBlock(blk);
+                    SATObjFactory.GetMainTop().SetMCBlock(blk);
+                    tagblocks.clear();
                 }
                 TimeUpdate(begin, G_FRAME);
             } catch (SatException e) {
@@ -120,7 +115,7 @@ public class RuleThread implements Runnable {
         }
     }
     @Test
-    public void testRuleThread() throws SatException, SignatureException, Exception {
+    public void testRuleThread() throws Exception {
         SmartxCore core = new SmartxCore();
         core.InitStorage();
         core.ReadAccounts();
@@ -132,9 +127,6 @@ public class RuleThread implements Runnable {
         Thread rulethread = new Thread(rule, "rule");
         rulethread.setPriority(Thread.MAX_PRIORITY);
         rulethread.start();
-        GeneralMine mine = new GeneralMine();
-        TransDB smartxdb = SATObjFactory.GetTxDB();
-        RuleExecutor executor = SATObjFactory.GetExecutor();
         Block blk = null;
         MessageHandle msghandle = SATObjFactory.GetMessageHandle();
         while (true) {

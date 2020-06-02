@@ -1,11 +1,8 @@
 package com.smartx.core.blockchain;
 
 import com.smartx.Kernel;
-import com.smartx.block.BlockRelation;
 import com.smartx.cli.SmartxCommands;
 import com.smartx.core.consensus.BlockMainTop;
-import com.smartx.core.consensus.Consensus;
-import com.smartx.core.coordinate.BlockCache;
 import com.smartx.core.coordinate.RuleExecutor;
 import com.smartx.db.AccountDB;
 import com.smartx.db.DbSource;
@@ -20,28 +17,19 @@ public class SATObjFactory {
     private static SatPeerManager client = null;
     private static TransDB txdb = null;
     private static AccountDB accdb = null;
-    private static BlockRelation br = null;
     private static DbSource dbsrc = null;
     private static TraverBlock travblock = null;
-    private static Consensus conss = null;
     private static BlockDAG blockdag = null;
     private static TraverBlock tvblock = null;
     private static RuleExecutor executor = null;
     private static QueryDB querydb = null;
     private static BlockMainTop blocktop = null;
-    private static BlockCache cache = null;
     private static SmartxCommands commandexcute = null;
     public static SmartxCommands GetCommand() {
         if (commandexcute == null) {
             commandexcute = new SmartxCommands();
         }
         return commandexcute;
-    }
-    public static BlockCache GetCache() {
-        if (cache == null) {
-            cache = new BlockCache();
-        }
-        return cache;
     }
     public static BlockMainTop GetMainTop() {
         if (blocktop == null) {
@@ -67,12 +55,6 @@ public class SATObjFactory {
         }
         return blockdag;
     }
-    public static Consensus GetConsensus() {
-        if (conss == null) {
-            conss = new Consensus();
-        }
-        return conss;
-    }
     public static DbSource GetDbSource() {
         if (dbsrc == null) {
             dbsrc = new DbSource();
@@ -90,10 +72,6 @@ public class SATObjFactory {
             client = new SatPeerManager();
         }
         return client;
-    }
-    public static BlockRelation GetBlockRl() {
-        if (br == null) br = new BlockRelation(null);
-        return br;
     }
     public static AccountDB GetAccDB() {
         if (null == accdb) {
