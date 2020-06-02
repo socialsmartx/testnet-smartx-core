@@ -22,6 +22,7 @@ import com.smartx.core.consensus.GeneralMine;
 import com.smartx.core.consensus.SatException;
 import com.smartx.core.consensus.SmartxEpochTime;
 import com.smartx.core.syncmanager.MerkleTree;
+import com.smartx.core.syncmanager.SyncThread;
 import com.smartx.db.AccountDB;
 import com.smartx.db.TransDB;
 import com.smartx.event.PubSub;
@@ -39,10 +40,11 @@ public class ConsThread implements Runnable, PubSubSubscriber {
     public SystemProperties config = SystemProperties.getDefault();
     Map<String, Long> transfers = new HashMap<String, Long>();
     PubSub pubsub = PubSubFactory.getDefault();
-    public Long GetHegiht() {
-        return curblk.height;
-    }
-    ;
+    TraverBlock tvblock = SATObjFactory.GetTravBlock();
+    TransDB txdb = SATObjFactory.GetTxDB();
+    AccountDB accdb = SATObjFactory.GetAccDB();
+    BlockDAG blockdag = SATObjFactory.GetBlockDAG();
+    MessageHandle msghandle = SATObjFactory.GetMessageHandle();
     Block curblk = null;
     private static long proced_blocks = 0;
     public ConsThread() {
@@ -70,9 +72,6 @@ public class ConsThread implements Runnable, PubSubSubscriber {
     }
     public void run() {
         SmartxEpochTime.Sleep(3000);
-        TraverBlock tvblock = SATObjFactory.GetTravBlock();
-        TransDB txdb = SATObjFactory.GetTxDB();
-        AccountDB accdb = SATObjFactory.GetAccDB();
         PublishLatestHeight();
         while (true) {
             try {
@@ -88,12 +87,12 @@ public class ConsThread implements Runnable, PubSubSubscriber {
                     ApplyTransferGenesis(blk);
                     curblk = blk;
                 }
+                msghandle.CheckChannel();
                 Block mcBlock = null;
                 mcBlock = tvblock.GetNextMC(curblk, DataBase.SMARTX_BLOCK_HISTORY);
                 List<String> hashs = CheckBlockRef(mcBlock);
                 if (hashs.size() > 0) {
                     BlockDAG blkdag = SATObjFactory.GetBlockDAG();
-                    MessageHandle msghandle = SATObjFactory.GetMessageHandle();
                     Channel channel = SATObjFactory.GetMessageHandle().GetNodeBest();
                     if (channel != null) for (int i = 0; i < hashs.size(); i++) {
                         Block blk = msghandle.QueryBolck(channel, hashs.get(i), 5000);
@@ -110,8 +109,11 @@ public class ConsThread implements Runnable, PubSubSubscriber {
                     PubSmartxEvent(mcBlock);
                     GeneralMine.minePowerTotal.computingPower(mcBlock);
                 } else {
+                    long bestheight = msghandle.GetHeightBest();
+                    SyncThread.PullHeight(curblk.height+1);
                     PubSub.PubMessage(Message.MESSAGE_GET_LATESTHEIGHT, "height", String.valueOf(curblk.height));
-                    SmartxEpochTime.Sleep(1000);
+                    if (bestheight < curblk.height + 10)
+                        SmartxEpochTime.Sleep(1000);
                 }
                 OnOutTimeTransfers();
             } catch (Exception e) {
@@ -120,26 +122,30 @@ public class ConsThread implements Runnable, PubSubSubscriber {
         }
     }
     public void SetRewards(Block mcblock) throws SatException, SQLException {
-        AccountDB accdb = SATObjFactory.GetAccDB();
         mcblock.rewards = new BigInteger("1024");
         Account acc = accdb.GetAccount(mcblock.header.address);
         BlockDAG blockdag = SATObjFactory.GetBlockDAG();
-        if (acc == null) acc = accdb.CreateAccount(mcblock.header.address);
+        if (acc == null) {
+            acc = new Account();
+            acc.balance = new BigInteger("0");
+            acc.address = mcblock.header.address;
+            txdb.SaveAccount(acc);
+        }
         acc.balance = acc.balance.add(blockdag.GetRewards(mcblock.height));
-        accdb.SaveAccount(acc);
+        txdb.SaveAccount(acc);
     }
     static public List<Block> GetAllPreBlock(Block mcBlock) throws SatException, SQLException, SignatureException {
         List<Block> hashs = new ArrayList<Block>();
         TransDB txdb = SATObjFactory.GetTxDB();
         for (int xx = 0; xx < mcBlock.Flds.size(); xx++) {
-            Block fldBlk = txdb.GetBlock(mcBlock.Flds.get(xx).hash, txdb.GetDbtype(mcBlock.Flds.get(xx).hash));
+            Block fldBlk = txdb.GetBlock(mcBlock.Flds.get(xx).hash, DataBase.SMARTX_BLOCK_HISTORY);
             if (fldBlk == null || fldBlk.header.btype == Block.BLKType.SMARTX_TXS) {
                 continue;
             }
             hashs.add(fldBlk);
             //
             for (int yy = 0; yy < fldBlk.Flds.size(); yy++) {
-                Block blk = txdb.GetBlock(fldBlk.Flds.get(yy).hash, txdb.GetDbtype(fldBlk.Flds.get(yy).hash));
+                Block blk = txdb.GetBlock(fldBlk.Flds.get(yy).hash, DataBase.SMARTX_BLOCK_HISTORY);
                 if (fldBlk == null || fldBlk.header.btype != Block.BLKType.SMARTX_TXS) {
                     continue;
                 }
@@ -148,58 +154,55 @@ public class ConsThread implements Runnable, PubSubSubscriber {
         }
         return hashs;
     }
-    static public void SetPreBlockHeight(Block mcBlock, int height) throws SatException, SQLException, SignatureException {
-        List<Block> hashs = new ArrayList<Block>();
+    static public void SetPreBlockHeight(Block mcBlock, int height) throws SatException {
         TransDB txdb = SATObjFactory.GetTxDB();
         for (int xx = 0; xx < mcBlock.Flds.size(); xx++) {
-            Block fldBlk = txdb.GetBlock(mcBlock.Flds.get(xx).hash, txdb.GetDbtype(mcBlock.Flds.get(xx).hash));
+            Block fldBlk = txdb.GetBlock(mcBlock.Flds.get(xx).hash, DataBase.SMARTX_BLOCK_HISTORY);
             if (fldBlk == null || fldBlk.header.btype == Block.BLKType.SMARTX_TXS) {
                 continue;
             }
             fldBlk.height = height;
-            int dbtype = txdb.GetDbtype(fldBlk);
-            txdb.SaveHeight(fldBlk, dbtype);
+            txdb.SaveHeight(fldBlk, DataBase.SMARTX_BLOCK_HISTORY);
             for (int yy = 0; yy < fldBlk.Flds.size(); yy++) {
-                Block blk = txdb.GetBlock(fldBlk.Flds.get(yy).hash, txdb.GetDbtype(fldBlk.Flds.get(yy).hash));
+                Block blk = txdb.GetBlock(fldBlk.Flds.get(yy).hash, DataBase.SMARTX_BLOCK_HISTORY);
                 if (blk == null || blk.header.btype != Block.BLKType.SMARTX_TXS) {
                     continue;
                 }
                 blk.height = height;
-                dbtype = txdb.GetDbtype(blk);
-                txdb.SaveHeight(blk, dbtype);
+                txdb.SaveHeight(blk, DataBase.SMARTX_BLOCK_HISTORY);
             }
         }
     }
-    static public List<String> CheckBlockRef(Block mcBlock) throws SatException, SQLException {
+    static public List<String> CheckBlockRef(Block mcBlock) {
         List<String> hashs = new ArrayList<String>();
         TraverBlock tvblock = SATObjFactory.GetTravBlock();
         TransDB txdb = SATObjFactory.GetTxDB();
-        if (mcBlock != null) {
-            for (int i = 0; i < mcBlock.Flds.size(); i++) {
-                Block fldBlk = txdb.GetBlock(mcBlock.Flds.get(i).hash, txdb.GetDbtype(mcBlock.Flds.get(i).hash));
-                if (fldBlk == null) {
-                    hashs.add(mcBlock.Flds.get(i).hash);
-                    continue;
-                }
-                if (fldBlk.header.btype == Block.BLKType.SMARTX_MAIN || fldBlk.header.btype == Block.BLKType.SMARTX_MAINREF) {
-                    for (int j = 0; j < fldBlk.Flds.size(); j++) {
-                        Block tmp = txdb.GetBlock(fldBlk.Flds.get(j).hash, txdb.GetDbtype(fldBlk.Flds.get(j).hash));
-                        if (tmp == null) {
-                            hashs.add(fldBlk.Flds.get(j).hash);
-                            continue;
+        try {
+            if (mcBlock != null) {
+                for (int i = 0; i < mcBlock.Flds.size(); i++) {
+                    Block fldBlk = txdb.GetBlock(mcBlock.Flds.get(i).hash, DataBase.SMARTX_BLOCK_HISTORY);
+                    if (fldBlk == null) {
+                        hashs.add(mcBlock.Flds.get(i).hash);
+                        continue;
+                    }
+                    if (fldBlk.header.btype == Block.BLKType.SMARTX_MAIN || fldBlk.header.btype == Block.BLKType.SMARTX_MAINREF) {
+                        for (int j = 0; j < fldBlk.Flds.size(); j++) {
+                            Block tmp = txdb.GetBlock(fldBlk.Flds.get(j).hash, DataBase.SMARTX_BLOCK_HISTORY);
+                            if (tmp == null) {
+                                hashs.add(fldBlk.Flds.get(j).hash);
+                                continue;
+                            }
                         }
                     }
                 }
             }
+        } catch (Exception e) {
         }
         return hashs;
     }
     public boolean ApplyTransferGenesis(Block mcBlock) throws SatException, SQLException, SignatureException {
-        TraverBlock tvblock = SATObjFactory.GetTravBlock();
         List<Block> lists = tvblock.GetBlockRef(mcBlock);
         MerkleTree.sortNumberBlock(lists);
-        TransDB txdb = SATObjFactory.GetTxDB();
-        AccountDB accdb = SATObjFactory.GetAccDB();
         for (int i = 0; i < lists.size(); i++) {
             Block blk = lists.get(i);
             if (blk.header.btype == Block.BLKType.SMARTX_TXS) {
@@ -233,45 +236,59 @@ public class ConsThread implements Runnable, PubSubSubscriber {
         }
         return true;
     }
+    public List<Block> GetPreHeightBlockRef(Block mcBlock) {
+        List<Block> hashs = new ArrayList<Block>();
+        for (int i = 0; i < mcBlock.Flds.size(); i++) {
+            Block fldBlk = txdb.GetBlock(mcBlock.Flds.get(i).hash, DataBase.SMARTX_BLOCK_HISTORY);
+            for (int j = 0; j < fldBlk.Flds.size(); j++) {
+                Block tmpBlock = txdb.GetBlock(fldBlk.Flds.get(j).hash,  DataBase.SMARTX_BLOCK_HISTORY);
+                if (tmpBlock != null && tmpBlock.header.btype == Block.BLKType.SMARTX_TXS) {
+                    hashs.add(tmpBlock);
+                }
+            }
+        }
+        return hashs;
+    }
     public boolean ApplyTransfer(Block mcBlock) throws SatException, SQLException, SignatureException {
-        TraverBlock tvblock = SATObjFactory.GetTravBlock();
-        List<Block> lists = tvblock.GetBlockRef(mcBlock);
+        List<Block> lists = GetPreHeightBlockRef(mcBlock);
         proced_blocks = tvblock.GetAllBlocks(mcBlock);
         SmartxCommands.totalblocks += proced_blocks;
-        log.info("  apply height:" + mcBlock.height);
+
+        if ( (mcBlock.height-1) % 100 == 0)
+        log.info("  apply height:" + (mcBlock.height-1) + " count:" + lists.size());
+
         MerkleTree.sortNumberBlock(lists);
-        TransDB txdb = SATObjFactory.GetTxDB();
-        AccountDB accdb = SATObjFactory.GetAccDB();
         for (int i = 0; i < lists.size(); i++) {
             Block blk = lists.get(i);
             if (blk.header.btype == Block.BLKType.SMARTX_TXS) {
                 BigInteger satIn = GetBlockFieldAmount(blk, Field.FldType.SAT_FIELD_IN);
                 BigInteger satOut = GetBlockFieldAmount(blk, Field.FldType.SAT_FIELD_OUT);
                 if (satIn.compareTo(satOut) != 0) {
-                    log.info(blk.header.hash + "Transfer amount not equals!");
+                    log.error(blk.header.hash + "Transfer amount not equals!");
                     continue;
                 }
                 Field fieldIn = GetBlockField(blk, Field.FldType.SAT_FIELD_IN);
                 if (!fieldIn.hash.equals(blk.header.address)) {
-                    log.info(blk.header.hash + "Transfer hash not equals!");
+                    log.error(fieldIn.hash + " - " + blk.header.hash + " Transfer hash not equals!");
                     continue;
                 }
-                if (SmartXWallet.wallettype == SmartXWallet.FAST_WALLETTYPE) {
-                    if (!Key25519.verify2(blk.header.hash, blk.sign, blk.header.address)) {
-                        log.info(blk.header.hash + "Transfer hash not equals!");
-                        continue;
-                    }
-                } else {
-                    if (!SmartXWallet.verify(blk.ToSignStringBase58(), blk.sign, blk.header.address)) {
-                        log.error(blk.header.hash + "Transfer sgin verify error!");
-                        continue;
-                    }
-                }
+
+                blockdag.VerifySign(blk);
+
+                String from = "", to = "";
+                BigInteger frombal = new BigInteger("0");
+                BigInteger tobal = new BigInteger("0");
+                String mapstring = blk.header.hash;
+                Long transferHeight = transfers.get(mapstring);
+                if (transferHeight != null && transferHeight > 0) continue;
                 for (int j = 0; j < blk.Flds.size(); j++) {
                     Field satfield = blk.Flds.get(j);
                     Account account = accdb.GetAccount(satfield.hash);
                     if (account == null) {
-                        account = accdb.CreateAccount(satfield.hash);
+                        account = new Account();
+                        account.balance = new BigInteger("0");
+                        account.address = satfield.hash;
+                        txdb.SaveAccount(account);
                     }
                     if (account == null) {
                         log.info(blk.header.hash + "Transfer account error!");
@@ -281,19 +298,15 @@ public class ConsThread implements Runnable, PubSubSubscriber {
                     if (satfield.type == Field.FldType.SAT_FIELD_IN && !(account.balance.compareTo(satfield.amount) != -1))
                         break;
                     if (satfield.type == Field.FldType.SAT_FIELD_IN) {
-                        account.balance = account.balance.subtract(satfield.amount);
+                        frombal = account.balance.subtract(satfield.amount);
+                        from = account.address;
                     }
                     if (satfield.type == Field.FldType.SAT_FIELD_OUT) {
-                        account.balance = account.balance.add(satfield.amount);
+                        tobal = account.balance.add(satfield.amount);
+                        to = account.address;
                     }
-                    String mapstring = blk.header.hash + j + satfield.type.toString();
-                    Long transferHeight = transfers.get(mapstring);
-                    if (transferHeight != null && transferHeight > 0) continue;
-                    accdb.SaveAccount(account);
-                    Account account2 = accdb.GetAccount(satfield.hash);
-                    if (!account2.balance.equals(account.balance)) {
-                        throw new SatException(ErrCode.DB_INSERT_ERROR, "updata account to db error");
-                    }
+                }
+                if (txdb.SetTransaction(from, frombal, to, tobal)){
                     transfers.put(mapstring, (long) mcBlock.height);
                 }
             }

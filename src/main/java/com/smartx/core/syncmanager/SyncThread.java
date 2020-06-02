@@ -9,26 +9,20 @@ import org.apache.log4j.Logger;
 
 import com.smartx.block.Block;
 import com.smartx.core.blockchain.BlockDAG;
+import com.smartx.core.blockchain.DataBase;
 import com.smartx.core.blockchain.SATObjFactory;
-import com.smartx.core.blockchain.SatPeerManager;
 import com.smartx.core.blockchain.TraverBlock;
 import com.smartx.core.consensus.SatException;
 import com.smartx.core.consensus.SmartxEpochTime;
 import com.smartx.db.TransDB;
 import com.smartx.net.Channel;
 import com.smartx.net.msg.MessageHandle;
-import com.smartx.util.Tools;
 
 public class SyncThread implements Runnable {
     private static Logger log = Logger.getLogger(SyncThread.class);
     public void run() {
         SmartxEpochTime.Sleep(3000);
-        TransDB smartxdb = SATObjFactory.GetTxDB();
-        SatPeerManager Peer = SATObjFactory.GetPeerMgr();
-        BlockDAG blockdag = SATObjFactory.GetBlockDAG();
-        boolean isSync = true;
         while (true) {
-            long begin = SmartxEpochTime.get_timestamp();
             try {
                 {
                     SyncHeight();
@@ -38,6 +32,21 @@ public class SyncThread implements Runnable {
                 e.printStackTrace();
             }
         }
+    }
+    static synchronized public boolean PullHeight(long height) throws Exception {
+        TransDB txdb = SATObjFactory.GetTxDB();
+        TraverBlock tvblock = SATObjFactory.GetTravBlock();
+        BlockDAG blkdag = SATObjFactory.GetBlockDAG();
+        MessageHandle msghandle = SATObjFactory.GetMessageHandle();
+        Channel channel = SATObjFactory.GetMessageHandle().GetNodeBest();
+        if (channel == null) return false;
+        List<Block> lists = msghandle.QueryAllBolck(channel, (int) height, 5000);
+        if (lists == null) return false;
+        for (int i = 0; i < lists.size(); i++) {
+            Block blk = lists.get(i);
+            blkdag.AddBlock(blk);
+        }
+        return true;
     }
     static synchronized public boolean SyncHeight() throws Exception {
         TransDB txdb = SATObjFactory.GetTxDB();
@@ -101,7 +110,7 @@ public class SyncThread implements Runnable {
         Block mcBlock = tvblock.GetMCBlock((int) height);
         if (mcBlock == null) return hashs;
         for (int i = 0; i < mcBlock.Flds.size(); i++) {
-            Block fldBlk = txdb.GetBlock(mcBlock.Flds.get(i).hash, txdb.GetDbtype(mcBlock.Flds.get(i).hash));
+            Block fldBlk = txdb.GetBlock(mcBlock.Flds.get(i).hash, DataBase.SMARTX_BLOCK_HISTORY);
             if (fldBlk == null) {
                 hashs.add(mcBlock.Flds.get(i).hash);
                 continue;
@@ -111,7 +120,7 @@ public class SyncThread implements Runnable {
             }
             //
             for (int j = 0; j < fldBlk.Flds.size(); j++) {
-                Block tmp = txdb.GetBlock(fldBlk.Flds.get(j).hash, txdb.GetDbtype(fldBlk.Flds.get(j).hash));
+                Block tmp = txdb.GetBlock(fldBlk.Flds.get(j).hash, DataBase.SMARTX_BLOCK_HISTORY);
                 if (tmp == null) {
                     hashs.add(fldBlk.Flds.get(j).hash);
                     continue;
