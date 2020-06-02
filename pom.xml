@@ -21,7 +21,7 @@
         <relativePath/>
     </parent>
 
-    <!--maven的插件-->
+     <!--maven的插件-->
     <build>
         <finalName>smartx-${project.version}</finalName>
         <plugins>
@@ -529,7 +529,11 @@
             <artifactId>eddsa</artifactId>
             <version>0.3.0</version>
         </dependency>
-
+        <dependency>
+            <groupId>org.mybatis</groupId>
+            <artifactId>mybatis</artifactId>
+            <version>3.1.1</version>
+        </dependency>
         <!-- weupnp -->
         <dependency>
             <groupId>org.bitlet</groupId>
@@ -647,7 +651,6 @@
             <artifactId>httpcore</artifactId>
             <version>4.2.1</version>
         </dependency>
-
         <dependency>
             <groupId>net.sf.json-lib</groupId>
             <artifactId>json-lib</artifactId>
@@ -676,11 +679,9 @@
             <artifactId>core</artifactId>
             <version>4.2.0</version>
         </dependency>
-
         <dependency>
-            <groupId>com.google.code.findbugs</groupId>
-            <artifactId>findbugs</artifactId>
-            <version>3.0.1</version>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -739,7 +740,11 @@
             <version>3.1.6</version>
             <scope>test</scope>
         </dependency>
-
+        <dependency>
+            <groupId>org.luaj</groupId>
+            <artifactId>luaj-jse</artifactId>
+            <version>3.0.1</version>
+        </dependency>
         <dependency>
             <groupId>javax.xml.bind</groupId>
             <artifactId>jaxb-api</artifactId>
@@ -759,10 +764,6 @@
             <groupId>javax.activation</groupId>
             <artifactId>activation</artifactId>
             <version>1.1.1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.assertj</groupId>
-            <artifactId>assertj-core</artifactId>
         </dependency>
 
     </dependencies>

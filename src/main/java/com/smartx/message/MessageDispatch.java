@@ -9,8 +9,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
-import com.smartx.event.PubSubEvent;
-import com.smartx.event.PubSubSubscriber;
 import org.apache.log4j.Logger;
 import org.junit.Test;
 
@@ -23,6 +21,8 @@ import com.smartx.core.blockchain.SATObjFactory;
 import com.smartx.core.blockchain.TraverBlock;
 import com.smartx.core.consensus.SatException;
 import com.smartx.db.TransDB;
+import com.smartx.event.PubSubEvent;
+import com.smartx.event.PubSubSubscriber;
 import com.smartx.mine.MineThread;
 import com.smartx.mine.PoolThread;
 import com.smartx.util.Tools;

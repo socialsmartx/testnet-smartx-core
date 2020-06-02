@@ -1,6 +1,7 @@
 #folders
 .idea
 bin
+target
 
 #project files
 *.iml
@@ -17,6 +18,7 @@ target
 /src/main/java/com/smartx/api/v1/server/impl
 /MyWallet
 /conf
+/wallet.data
 
 #log
 *.log
