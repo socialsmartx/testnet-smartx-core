@@ -336,4 +336,7 @@ public class SystemProperties {
         return accountList;
     }
     /**bft相关配置 结束*/
+    public int getTerminalport() {
+        return config.getInt("net.terminalport");
+    }
 }

@@ -4,6 +4,8 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 
@@ -15,6 +17,11 @@ public class DBConnection {
     protected String username = null;
     protected String password = null;
     public Connection conn = null;
+    public DBConnection() {
+    }
+    public DBConnection(Connection conn) {
+        this.conn = conn;
+    }
     public synchronized Statement prepareStatement(final String sql) {
         Statement statement = null;
         try {
@@ -150,8 +157,13 @@ public class DBConnection {
     public boolean RollBack() {
         try {
             this.conn.rollback();
-        } catch (final SQLException e) {
+        } catch (SQLException e) {
             log.error("error: " + e);
+            String sqlState = e.getSQLState();
+            e.printStackTrace();
+            if ("08007".equals(sqlState) || "40001".equals(sqlState)) {
+                log.error("Note: must reconnect to mysql");
+            }
             return false;
         }
         return true;
@@ -159,8 +171,12 @@ public class DBConnection {
     public boolean Commit() {
         try {
             this.conn.commit();
-        } catch (final SQLException e) {
+        } catch (SQLException e) {
+            String sqlState = e.getSQLState();
             e.printStackTrace();
+            if ("08007".equals(sqlState) || "40001".equals(sqlState)) {
+                log.error("Note: must reconnect to mysql");
+            }
             return false;
         }
         return true;
@@ -171,6 +187,11 @@ public class DBConnection {
             //conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
         } catch (final SQLException e) {
             e.printStackTrace();
+            String sqlState = e.getSQLState();
+            e.printStackTrace();
+            if ("08007".equals(sqlState) || "40001".equals(sqlState)) {
+                log.error("Note: must reconnect to mysql");
+            }
             return false;
         }
         return true;

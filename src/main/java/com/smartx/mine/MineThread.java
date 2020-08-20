@@ -43,7 +43,9 @@ public class MineThread implements Runnable {
                 }
             }
     }
-    public void GetMineTask() throws SatException {
+
+    public void GetMineTask() throws Exception
+    {
         {
             //if (start >= end || Miningblk==null)
             {
@@ -76,6 +78,31 @@ public class MineThread implements Runnable {
             }
         }
     }
+
+    public boolean RegisterERC() throws Exception
+    {
+        Message message = new Message(Message.MESSAGE_GET_MINE_TASK);
+        message.args = new HashMap<String, String>();
+        message.args.put("address", Address);
+        message.args.put("ercAddress", ErcAddress);
+        message.args.put("phone", Phone);
+        SatPeerManager client = new SatPeerManager();
+        Message resp = client.QueryMessageV1(PoolUrl, message);
+        if (resp == null || resp.args.get("result") == null)
+        {
+            System.out.println("RegisterERC Error: pool no reply");
+            return false;
+        }
+
+        if(resp.args.get("result")=="ok") {
+            return true;
+        }
+        else {
+            System.out.println("RegisterERC Error: " + resp.args.get("result") );
+            return false;
+        }
+    }
+
     public void run() {
         String temp_Miningblk = null;
         long temp_diffCur = 0;
@@ -119,10 +146,13 @@ public class MineThread implements Runnable {
             }
         }
     }
+
     public String Address = "";
     public String PoolUrl = "127.0.0.1:8001";
+    public String ErcAddress = "";
+    public String Phone = "";
     public static void main(String[] args) {
-        System.out.println("cmd format: smartx.exe -address:your_address -poolurl:ip:port -threads:1");
+        System.out.println("cmd format: smartx.exe -address:your_address -poolurl:ip:port -threads:1 -erc:000000 -phone:111");
         MineThread mineThread = SATObjFactory.GetMineThread();
         int nThreads = Runtime.getRuntime().availableProcessors() * 2 - 1;
         for (String str : args) {
@@ -136,6 +166,10 @@ public class MineThread implements Runnable {
                 mineThread.PoolUrl = str.replace("poolurl:", "");
             } else if (str.indexOf("threads") == 0) {
                 nThreads = Integer.valueOf(str.replace("threads:", ""));
+            } else if (str.indexOf("erc") == 0) {
+                mineThread.ErcAddress = str.replace("erc:", "");
+            } else if (str.indexOf("phone") == 0) {
+                mineThread.Phone = str.replace("phone:", "");
             }
             System.out.println(str);
         }
@@ -154,6 +188,18 @@ public class MineThread implements Runnable {
                 g_do_mining = false;
             }
         });
+
+        for (; ; ) {
+            try {
+                Thread.sleep(3000);
+                if (!mineThread.RegisterERC())
+                    return ;
+                break;
+            } catch (Exception e) {
+                System.out.println("RegisterERC " + e.getMessage());
+            }
+        }
+
         for (; ; ) {
             long tm = System.currentTimeMillis();
             //synchronized(mineThread)
@@ -165,8 +211,9 @@ public class MineThread implements Runnable {
                 mineThread.GetMineTask();
                 Thread.sleep(1000);
             } catch (Exception e) {
-                e.printStackTrace();
+                System.out.println("GetMineTask :" +  e.getMessage());
             }
         }
     }
+
 }

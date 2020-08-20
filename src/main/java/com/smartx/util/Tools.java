@@ -136,6 +136,19 @@ public final class Tools {
             }
         }
     }
+    public static String broadcastID(String broadcast, String id)
+    {
+        boolean flag = false;
+        String strs[] = broadcast.split(";");
+        for (int i=0; i<strs.length; i++){
+            if (strs[i].equals(id)){
+                flag = true;
+            }
+        }
+        if (!flag) return broadcast + ";" + id;
+
+        return broadcast;
+    }
     public static Map<String, String> formData2Dic(final String formData) {
         final Map<String, String> result = new HashMap<>();
         if (formData == null || formData.trim().length() == 0) {

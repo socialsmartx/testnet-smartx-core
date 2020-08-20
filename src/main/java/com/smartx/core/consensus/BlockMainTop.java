@@ -6,19 +6,12 @@ import com.smartx.block.Block;
 import com.smartx.block.Field;
 
 public class BlockMainTop {
-    public Block TOPBLOCK = null;
-    public Block MCTOPBLOCK = null;
-    public synchronized Block GetTopBlock() {
-        return TOPBLOCK;
+    public Block MCBLOCK = null;
+    public synchronized void SetMCBlock(Block blk) {
+        MCBLOCK = blk;
     }
-    public synchronized void SetTopBlock(Block blk) {
-        TOPBLOCK = blk;
-    }
-    public synchronized void SetMCTopBlock(Block blk) {
-        MCTOPBLOCK = blk;
-    }
-    public synchronized Block GetMCTopBlock() {
-        return MCTOPBLOCK;
+    public synchronized Block GetMCBlock() {
+        return MCBLOCK;
     }
     public static Block InitRefField(Block mblk, Block refedblk) {
         Field field = new Field();

@@ -1,6 +1,7 @@
 #folders
 .idea
 bin
+target
 
 #project files
 *.iml
@@ -10,6 +11,8 @@ bin
 *.obj
 *.class
 target
+distribution
+
 
 #distrubition
 /src/main/resources/smartx.conf
@@ -17,6 +20,8 @@ target
 /src/main/java/com/smartx/api/v1/server/impl
 /MyWallet
 /conf
+/wallet.data
+/ java-smartx-core-rule.rar
 
 #log
 *.log

@@ -5,9 +5,7 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
-import com.smartx.core.blockchain.DataBase;
 import com.smartx.core.blockchain.SATObjFactory;
-import com.smartx.core.consensus.ErrCode;
 import com.smartx.core.consensus.SatException;
 import com.smartx.db.TransDB;
 
@@ -24,14 +22,6 @@ public class BlockRelation {
             }
         }
         return false;
-    }
-    public void CheckLoopRef(Block blk, Block blkref) throws SatException {
-        for (int i = 0; i < blkref.Flds.size(); i++) {
-            String hash = blkref.Flds.get(i).hash;
-            if (hash.equals(blk.header.hash)) {
-                throw new SatException(ErrCode.SAT_LOOPREF_ERROR, "block ref loop error:" + blk.header.hash);
-            }
-        }
     }
     public static int FindInList(Block blk, List<Block> blks) {
         for (int i = 0; i < blks.size(); i++) {

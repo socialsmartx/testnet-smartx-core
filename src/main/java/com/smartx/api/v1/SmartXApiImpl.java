@@ -8,6 +8,7 @@ package com.smartx.api.v1;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static javax.ws.rs.core.Response.Status.BAD_REQUEST;
+import static javax.ws.rs.core.Response.Status.OK;
 
 import java.math.BigInteger;
 import java.nio.charset.Charset;
@@ -22,6 +23,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 
 import org.apache.log4j.Logger;
+import org.junit.Test;
 
 import com.smartx.Kernel;
 import com.smartx.api.v1.model.*;
@@ -29,6 +31,7 @@ import com.smartx.api.v1.server.SmartXApi;
 import com.smartx.block.Block;
 import com.smartx.core.Amount;
 import com.smartx.core.blockchain.BlockDAG;
+import com.smartx.core.blockchain.IBlockDAG;
 import com.smartx.core.blockchain.SATObjFactory;
 import com.smartx.core.blockchain.TraverBlock;
 import com.smartx.core.consensus.GeneralMine;
@@ -38,6 +41,7 @@ import com.smartx.crypto.CryptoException;
 import com.smartx.crypto.Hash;
 import com.smartx.crypto.Hex;
 import com.smartx.crypto.Key;
+import com.smartx.db.BlockStats;
 import com.smartx.message.Message;
 import com.smartx.mine.PoolThread;
 import com.smartx.util.Tools;
@@ -72,7 +76,7 @@ public final class SmartXApiImpl implements SmartXApi {
         resp.setSuccess(false);
         resp.setMessage(message);
         logger.error("Bad request: {}" + message);
-        return Response.status(BAD_REQUEST).entity(resp).build();
+        return Response.status(OK).entity(resp).build();
     }
     private static final String IP_ADDRESS_PATTERN = "^([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\." + "([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\." + "([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\." + "([01]?\\d\\d?|2[0-4]\\d|25[0-5])$";
     private String parseIp(String ip, boolean required) {
@@ -163,8 +167,17 @@ public final class SmartXApiImpl implements SmartXApi {
         try {
             String lpower = GeneralMine.minePowerOur.GetPower();
             String gpower = GeneralMine.minePowerTotal.GetPower();
+            IBlockDAG blockdag = SATObjFactory.GetBlockDAG();
+            long height = blockdag.GetLatestHeight();
+            Block MC = blockdag.GetMCBlock(height);
+            String globaldiff = MC.diff;
+            int ntotal = BlockStats.GetNtotal();
             GetGlobalInfoResponse response = new GetGlobalInfoResponse();
-            response.globalHashRate(gpower).globalHashRatePer("13.8%").globalBlockTimeCost("0.05").globalBlockTimeCostPer("13.8%").currentBlockHeight("23455").currentBlockHeightPer("13.8%").globalDifficulty("2213545435").globalDifficultyPer("13.8%").globalTransactionCount("234234324").globalTransactionCountPer("13.8%");
+            response.globalHashRate(gpower).globalHashRatePer("13.8%").globalBlockTimeCost("30.0s").
+                    globalBlockTimeCostPer("13.8%").currentBlockHeight(String.valueOf(height)).
+                    currentBlockHeightPer("13.8%").
+                    globalDifficulty(globaldiff).globalDifficultyPer("13.8%").globalTransactionCount(String.valueOf(ntotal)).
+                    globalTransactionCountPer("13.8%");
             return success(response);
         } catch (IllegalArgumentException ex) {
             return badRequest(ex.getMessage());
@@ -186,6 +199,25 @@ public final class SmartXApiImpl implements SmartXApi {
             return success(response);
         } catch (IllegalArgumentException ex) {
             return badRequest(ex.getMessage());
+        }
+    }
+    @Override
+    public Response getAccountTransactions(@NotNull @Pattern(regexp = "^(0x)?[0-9a-fA-F]{40}$") String address, @NotNull @Pattern(regexp = "^\\d+$") String height) {
+        try {
+            byte[] addressBytes = parseAddress(address, true);
+            BlockDAG blockDAG = SATObjFactory.GetBlockDAG();
+            List<TxBlock> txBlockList = blockDAG.GetBlocks(address);
+            List<TransactionType> txTypeList = new ArrayList<>();
+            for (TxBlock block : txBlockList) {
+                TransactionType txType = TypeFactory.transactionType(block.hash, block.in, block.out, block.timestamp, BigInteger.ZERO, block.amount);
+                txTypeList.add(txType);
+            }
+            GetAccountTransactionsResponse resp = new GetAccountTransactionsResponse();
+            resp.setTransactionCount(txBlockList.size());
+            resp.setTransactionList(txTypeList);
+            return success(resp);
+        } catch (IllegalArgumentException e) {
+            return badRequest(e.getMessage());
         }
     }
     @Override
@@ -216,25 +248,6 @@ public final class SmartXApiImpl implements SmartXApi {
             return success(resp);
         } catch (IllegalArgumentException ex) {
             return badRequest(ex.getMessage());
-        }
-    }
-    @Override
-    public Response getAccountTransactions(@NotNull @Pattern(regexp = "^(0x)?[0-9a-fA-F]{40}$") String address, @NotNull @Pattern(regexp = "^\\d+$") String height) {
-        try {
-            byte[] addressBytes = parseAddress(address, true);
-            BlockDAG blockDAG = SATObjFactory.GetBlockDAG();
-            List<TxBlock> txBlockList = blockDAG.GetBlocks(address);
-            List<TransactionType> txTypeList = new ArrayList<>();
-            for (TxBlock block : txBlockList) {
-                TransactionType txType = TypeFactory.transactionType(block.hash, block.in, block.out, block.timestamp, BigInteger.ZERO, block.amount);
-                txTypeList.add(txType);
-            }
-            GetAccountTransactionsResponse resp = new GetAccountTransactionsResponse();
-            resp.setTransactionCount(txBlockList.size());
-            resp.setTransactionList(txTypeList);
-            return success(resp);
-        } catch (IllegalArgumentException e) {
-            return badRequest(e.getMessage());
         }
     }
     @Override
@@ -290,15 +303,18 @@ public final class SmartXApiImpl implements SmartXApi {
             GetBlockResponse resp = new GetBlockResponse();
             resp.setResult(TypeFactory.blockType(blk));
             return success(resp);
-        } catch (IllegalArgumentException | SatException | SQLException | SignatureException e) {
+        } catch (IllegalArgumentException e) {
             return badRequest(e.getMessage());
         }
+    }
+    public static void main(String[] args) {
+        SmartXApiImpl impl = new SmartXApiImpl(null);
     }
     @Override
     public Response getLatestBlockHeight() {
         BlockDAG blockDAG = SATObjFactory.GetBlockDAG();
         long latestBlockHeight = blockDAG.GetLatestHeight();
-        logger.info("get latest height {} " + latestBlockHeight);
+        //logger.info(String.format("get latest height {%d} ", latestBlockHeight));
         GetLatestBlockHeightResponse response = new GetLatestBlockHeightResponse();
         response.setHeight(Long.toString(latestBlockHeight));
         return success(response);
@@ -306,15 +322,17 @@ public final class SmartXApiImpl implements SmartXApi {
     @Override
     public Response getLatestBlockInfo() {
         BlockDAG blockDAG = SATObjFactory.GetBlockDAG();
-        TraverBlock tvblock = SATObjFactory.GetTravBlock();
         long latestBlockHeight = blockDAG.GetLatestHeight();
         Block latestMcBlock = blockDAG.GetMCBlock(latestBlockHeight);
         if (latestMcBlock == null) {
-            logger.error("get latest mc block null at height {}" + latestBlockHeight);
             return badRequest("get latest mc block null");
         }
         try {
-            List<Block> blockList = tvblock.GetBlockRef(latestMcBlock);
+            List<Block> blockList = new ArrayList<Block>();
+            for (int i = 0; i < 10; i++) {
+                Block block = blockDAG.GetMCBlock(latestBlockHeight - i);
+                blockList.add(block);
+            }
             List<BlockType> blockTypeList = new ArrayList<>();
             for (Block block : blockList) {
                 BlockType blockType = TypeFactory.blockType(block);
@@ -324,7 +342,7 @@ public final class SmartXApiImpl implements SmartXApi {
             response.setMcBlockCount(Integer.toString(blockTypeList.size()));
             response.setMcBlockList(blockTypeList);
             return success(response);
-        } catch (IllegalArgumentException | SQLException | SatException | SignatureException e) {
+        } catch (IllegalArgumentException e) {
             return badRequest(e.getMessage());
         }
     }
@@ -349,7 +367,7 @@ public final class SmartXApiImpl implements SmartXApi {
             response.setMcBlockCount(Integer.toString(blockTypeList.size()));
             response.setMcBlockList(blockTypeList);
             return success(response);
-        } catch (IllegalArgumentException | SQLException | SatException | SignatureException e) {
+        } catch (IllegalArgumentException e) {
             return badRequest(e.getMessage());
         }
     }
@@ -374,7 +392,7 @@ public final class SmartXApiImpl implements SmartXApi {
             response.setMcBlockCount(Integer.toString(blockTypeList.size()));
             response.setMcBlockList(blockTypeList);
             return success(response);
-        } catch (IllegalArgumentException | SQLException | SatException | SignatureException e) {
+        } catch (IllegalArgumentException e) {
             return badRequest(e.getMessage());
         }
     }
@@ -393,4 +411,37 @@ public final class SmartXApiImpl implements SmartXApi {
         response.setResult(TypeFactory.jsonType(Message.ToJson(resp)));
         return success(response);
     }
+    @Override
+    public Response saveAddress(@QueryParam("json") @NotNull String json) {
+        PoolThread poolThread = SATObjFactory.GetPoolThread();
+        Message message = Message.FromJson(json);
+        Message resp = null;
+        try {
+            resp = poolThread.OnGetMineTask(message);
+            resp.args.put("ret", "0");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        SaveAddressResponse response = new SaveAddressResponse();
+        response.setResult(TypeFactory.jsonType(Message.ToJson(resp)));
+        return success(response);
+    }
+
+    @Override
+    public Response registerERC(@QueryParam("json") @NotNull String json) {
+        PoolThread poolThread = SATObjFactory.GetPoolThread();
+        Message message = Message.FromJson(json);
+        Message resp = null;
+        try {
+            resp = poolThread.OnRegisterERC(message);
+            resp.args.put("ret", "0");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        RegisterERCResponse response = new RegisterERCResponse();
+        response.setResult(TypeFactory.jsonType(Message.ToJson(resp)));
+        return success(response);
+    }
+
+
 }

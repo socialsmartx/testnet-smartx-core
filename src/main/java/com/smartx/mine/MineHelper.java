@@ -94,11 +94,11 @@ public class MineHelper {
             if (tempdiff == null && tempdiff.equals("")) return;
             double power = MineHelper.computingPower(tempdiff);
             if (difftotal != 0) {
-                power = Math.min(difftotal * 10, power);
-                power = Math.max(difftotal * 0.1, power);
+                //power = Math.min(difftotal * 10, power);
+                //power = Math.max(difftotal * 0.1, power);
             }
             diffs.add(power);
-            if (diffs.size() > 192) // 24*4*2 4hr
+            if (diffs.size() > 480) // 24*4*2 4hr
                 diffs.remove(0);
             for (int i = 0; i < diffs.size(); i++) {
                 difftotal = difftotal + diffs.get(i);

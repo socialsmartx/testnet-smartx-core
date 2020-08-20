@@ -17,7 +17,6 @@ import java.util.Locale;
 import java.util.Map.Entry;
 
 import org.apache.commons.lang3.tuple.Pair;
-import org.fusesource.leveldbjni.JniDBFactory;
 import org.iq80.leveldb.*;
 
 import com.smartx.util.ClosableIterator;
@@ -66,7 +65,7 @@ public class LeveldbDatabase implements Database {
      */
     protected void open(Options options) {
         try {
-            db = JniDBFactory.factory.open(file, options);
+            db = factory.open(file, options);
             isOpened = true;
         } catch (IOException e) {
             if (e.getMessage().contains("Corruption")) {
@@ -74,7 +73,7 @@ public class LeveldbDatabase implements Database {
                 recover(options);
                 // reopen
                 try {
-                    db = JniDBFactory.factory.open(file, options);
+                    db = factory.open(file, options);
                     isOpened = true;
                 } catch (IOException ex) {
                     logger.error("Failed to open database", e);

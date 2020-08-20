@@ -555,6 +555,10 @@
           "items": {
             "$ref": "#/definitions/SignType"
           }
+        },
+        "nodename": {
+          "description": "The nodename that package the blocks",
+          "type": "string"
         }
       }
     },
@@ -634,6 +638,21 @@
         }
       ]
     },
+    "SaveAddressResponse": {
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ApiHandlerResponse"
+        },
+        {
+          "properties": {
+            "result": {
+              "$ref": "#/definitions/jsonType"
+            }
+          }
+        }
+      ]
+    },
     "GetMineTaskResponse": {
       "type": "object",
       "allOf": [
@@ -649,6 +668,21 @@
         }
       ]
     }
+  },
+  "RegisterERCResponse": {
+    "type": "object",
+    "allOf": [
+      {
+        "$ref": "#/definitions/ApiHandlerResponse"
+      },
+      {
+        "properties": {
+          "result": {
+            "$ref": "#/definitions/jsonType"
+          }
+        }
+      }
+    ]
   },
   "info": {
     "description": "SmartX is an experimental high-performance blockchain platform that powers decentralized application.",
@@ -1191,8 +1225,91 @@
           }
         ]
       }
-    }
+    },
 
+    "/saveaddress": {
+      "get": {
+        "tags": [
+          "Blockchain"
+        ],
+        "summary": "get latest block info list",
+        "description": "get latest block info list",
+        "operationId": "saveAddress",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "json",
+            "in": "query",
+            "description": "task of json",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/SaveAddressResponse"
+            }
+          },
+          "400": {
+            "description": "bad request",
+            "schema": {
+              "$ref": "#/definitions/ApiHandlerResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
+      }
+    },
+
+    "/registerERC": {
+      "get": {
+        "tags": [
+          "Blockchain"
+        ],
+        "summary": "get latest block info list",
+        "description": "get latest block info list",
+        "operationId": "registerERC",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "json",
+            "in": "query",
+            "description": "task of json",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/RegisterERCResponse"
+            }
+          },
+          "400": {
+            "description": "bad request",
+            "schema": {
+              "$ref": "#/definitions/ApiHandlerResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ]
+      }
+    }
   },
 
   "produces": [

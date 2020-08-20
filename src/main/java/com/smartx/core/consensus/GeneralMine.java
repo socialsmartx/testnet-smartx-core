@@ -3,24 +3,16 @@ package com.smartx.core.consensus;
 import java.math.BigInteger;
 import java.security.SignatureException;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.log4j.Logger;
 
-import com.smartx.block.Account;
 import com.smartx.block.Block;
-import com.smartx.block.BlockRelation;
 import com.smartx.config.SystemProperties;
 import com.smartx.core.SmartxCore;
 import com.smartx.core.blockchain.*;
-import com.smartx.core.coordinate.BlockCache;
 import com.smartx.core.syncmanager.MerkleTree;
-import com.smartx.core.syncmanager.SyncThread;
 import com.smartx.crypto.Sha256;
-import com.smartx.db.AccountDB;
 import com.smartx.db.BlockStats;
 import com.smartx.db.TransDB;
 import com.smartx.mine.MineHelper;
@@ -36,8 +28,11 @@ public class GeneralMine implements Runnable {
     public static boolean g_stop_general_mining = true;
     public static long G_FRAME = 1000 / 30;
     public static PoolThread poolThread = SATObjFactory.GetPoolThread();
-    private Lock lock = new ReentrantLock(true);
-    public static Block CreateMainBlock() throws SatException {
+    public TransDB smartxdb = SATObjFactory.GetTxDB();
+    public BlockMainTop top = SATObjFactory.GetMainTop();
+    public TraverBlock tvblock = SATObjFactory.GetTravBlock();
+    public BlockDAG blockdag = SATObjFactory.GetBlockDAG();
+    public static Block CreateMainBlock() {
         long tm = SmartxEpochTime.get_timestamp();
         Block blk = new Block();
         blk.header.headtype = 1;
@@ -64,77 +59,45 @@ public class GeneralMine implements Runnable {
     public static boolean CheckNTP() {
         return true;
     }
-    public static String CreateAccount() throws SatException, SQLException {
-        AccountDB accdb = SATObjFactory.GetAccDB();
-        Account acc = Account.CreateAccount();
-        accdb.SaveAccount(acc);
-        return acc.address;
-    }
-    public Block LinkTxBlocks(Block curblk) throws SatException, SQLException {
-        BlockCache cache = SATObjFactory.GetCache();
-        BlockDAG blockdag = SATObjFactory.GetBlockDAG();
-        TransDB smartxdb = SATObjFactory.GetTxDB();
-        for (int i = 0; i < cache.recvcache.size(); i++) {
-            Block txblk = cache.recvcache.get(i);
-            curblk = blockdag.InitRefField(curblk, txblk);
-            smartxdb.SaveBlock(txblk, DataBase.SMARTX_BLOCK_EPOCH);
-        }
-        cache.recvcache.clear();
-        return curblk;
-    }
     public synchronized Block BlockReference(Block curblk, List<Block> links) throws SatException, SQLException, SignatureException {
-        TraverBlock tvblock = SATObjFactory.GetTravBlock();
-        BlockDAG blockdag = SATObjFactory.GetBlockDAG();
-        BlockMainTop maintop = SATObjFactory.GetMainTop();
-        TransDB smartxdb = SATObjFactory.GetTxDB();
-        Block topblk = maintop.GetTopBlock();
-        Block MC = smartxdb.GetLatestMC();
-        ArrayList<Block> blks_1 = new ArrayList<Block>();
-        for (int i = 0; i < links.size(); i++) {
-            ArrayList<Block> blocks = tvblock.GetBackBlocks(links.get(i), DataBase.SMARTX_BLOCK_EPOCH);
-            BlockRelation.AddList(blks_1, blocks);
-        }
-        if (tvblock.CheckMoreCreate(blks_1)) return null;
-        blockdag.RefEpochBlock(topblk, MC, curblk);
+        Block topblk = top.GetMCBlock();
+        Block MC = tvblock.SelectMCBlock(links);
+        assert (curblk.timenum > topblk.timenum);
+        long nowheight = MC.height + 1;
+        log.info("do refer nonce:" + curblk.header.nonce + " num:" + curblk.timenum + " time:" + curblk.time + " type:" + curblk.header.btype);
+        log.info("front:" + topblk.timenum + " now:" + curblk.timenum + " now height:" + nowheight);
+        blockdag.RefBlockLists(curblk,links);
         log.info(" MC:" + MC.header.hash);
         return MC;
     }
-    void DoReferTop() throws SatException, SQLException, SignatureException {
-        BlockDAG blockdag = SATObjFactory.GetBlockDAG();
-        BlockMainTop top = SATObjFactory.GetMainTop();
-        if (SmartxCore.G_INSTANCE == false) {
-            TransDB smartxdb = SATObjFactory.GetTxDB();
-            int num = (int) SmartxEpochTime.GetCurTimeNum();
-            SmartxCore.G_INSTANCE = true;
-            {
-                ArrayList<Block> blks = blockdag.ReMoveMineTop();
-                BlockRelation.AddList(DataBase.G_FRONTREF, blks);
-            }
-        }
-    }
     public void SaveBlock(Block blk) throws SatException, SQLException {
-        TransDB txdb = SATObjFactory.GetTxDB();
-        txdb.SaveBlock(blk, DataBase.SMARTX_BLOCK_EPOCH);
+        smartxdb.SaveBlock(blk, DataBase.SMARTX_BLOCK_HISTORY);
     }
     public List<Block> MoveChainTop() throws SatException, SQLException, SignatureException {
-        BlockDAG blockdag = SATObjFactory.GetBlockDAG();
-        List<Block> blks = blockdag.ReMoveMineTop();
-        DataBase.G_FRONTREF.clear();
-        BlockRelation.AddList(DataBase.G_FRONTREF, blks);
-        return DataBase.G_FRONTREF;
+        Block MC = smartxdb.GetLatestMC();
+        top.SetMCBlock(MC);
+        List<Block> chain = smartxdb.GetAllHeight(MC.height,DataBase.SMARTX_BLOCK_HISTORY);
+        List<Block> blockoks = tvblock.SelLinkBlock(chain);
+        return blockoks;
     }
     public void IncrsHeight(Block curblk) {
-        BlockMainTop top = SATObjFactory.GetMainTop();
-        Block topblk = top.GetTopBlock();
-        curblk.height = (topblk == null ? 1 : top.GetTopBlock().height + 1);
-        log.info("settop:" + top.GetTopBlock().nodename + " " + top.GetTopBlock().header.hash + " " + curblk.epoch + " " + Tools.CalTimeEpoch2Num(curblk.epoch));
+        Block topblk = top.GetMCBlock();
+        curblk.height = (topblk == null ? 1 : top.GetMCBlock().height + 1);
+        log.info("settop:" + top.GetMCBlock().nodename + " " + top.GetMCBlock().header.hash + " " + curblk.epoch + " " + Tools.CalTimeEpoch2Num(curblk.epoch));
     }
-    public Block DoMineBlock(int start) throws SatException, SQLException {
+    public Block DoMineBlock() throws SatException{
         Block curblk = null;
         List<Block> links = null;
         try {
             curblk = CreateMainBlock();
             links = MoveChainTop();
+            for (int i=0; i<DataBase.G_TransactionList.size(); i++){
+                Block tx = DataBase.G_TransactionList.get(i);
+                if (!smartxdb.GetBackRefer(tx, DataBase.SMARTX_BLOCK_HISTORY)) {
+                    links.add(tx);
+                }
+            }
+            DataBase.G_TransactionList.clear();
             Block MC = BlockReference(curblk, links);
             if (MC != null) {
                 IncrsHeight(curblk);
@@ -147,8 +110,8 @@ public class GeneralMine implements Runnable {
             }
             throw e;
         } catch (Exception e) {
+            e.printStackTrace();
             log.error("errcode:" + e);
-            g_stop_general_mining = true;
         }
         return curblk;
     }
@@ -173,8 +136,6 @@ public class GeneralMine implements Runnable {
         return SmartxCore.G_Wallet;
     }
     public void SignBlock(Block blk) throws SignatureException {
-        BlockDAG blockdag = SATObjFactory.GetBlockDAG();
-        BlockHash bhash = new BlockHash();
         blk.sign = blockdag.SignBlock(blk.header.hash, GetSignWallet());
         boolean result = false;
         if (SmartXWallet.wallettype == SmartXWallet.FAST_WALLETTYPE) {
@@ -191,31 +152,8 @@ public class GeneralMine implements Runnable {
     }
     public void CreateBlkHash(Block block) {
         block.header.hash = Sha256.getH256(block);
-        log.info("gen hash:" + block.header.hash);
-    }
-    public void DoSyncBlock() throws SatException, SQLException, SignatureException {
-        try {
-            SyncThread.SyncHeight();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-    public void DoRuleQuery(Block blk) throws Exception {
-        TransDB smartxdb = SATObjFactory.GetTxDB();
-        BlockDAG blockdag = SATObjFactory.GetBlockDAG();
-        TraverBlock tvblock = SATObjFactory.GetTravBlock();
-        Consensus cons = SATObjFactory.GetConsensus();
-        MessageHandle msghandle = SATObjFactory.GetMessageHandle();
-        assert (blk != null);
-        Block MC = null;
-        if ((MC = tvblock.GetMCBlock((int) blk.height)) == null) {
-            MC = msghandle.RuleQuery(blk, 5000);
-            if (null == MC) {
-                if (cons.ReSendBlock()) return;
-            }
-            smartxdb.SaveRuleSign(MC, DataBase.SMARTX_BLOCK_EPOCH);
-        }
-        blockdag.AddBlock(MC);
+        log.info("gen hash:" + block.header.hash + " height:" + block.height + " clients:" +
+                poolThread.clients.size() + " reward blocks:" + poolThread.powsForAddress.size());
     }
     public void QueryCoinBase() throws SatException {
         if (SmartXWallet.wallettype == SmartXWallet.SECP_WALLETTYPE) {
@@ -229,11 +167,7 @@ public class GeneralMine implements Runnable {
     public static MineHelper.MinePower minePowerOur = new MineHelper.MinePower();
     public static MineHelper.MinePower minePowerTotal = new MineHelper.MinePower();
     public void run() {
-        TransDB smartxdb = SATObjFactory.GetTxDB();
         MessageHandle msghandle = SATObjFactory.GetMessageHandle();
-        BlockDAG blockdag = SATObjFactory.GetBlockDAG();
-        TraverBlock tvblock = SATObjFactory.GetTravBlock();
-        BlockMainTop top = SATObjFactory.GetMainTop();
         Block blk = null;
         while (true) {
             long begin = SmartxEpochTime.get_timestamp();
@@ -243,29 +177,23 @@ public class GeneralMine implements Runnable {
             }
             try {
                 QueryCoinBase();
-                DoReferTop();
-                if (DataBase.G_Status.GetStatus() == SmartxStatus.STATUS.SMARTX_STATUS_NORMAL || DataBase.G_Status.GetStatus() == SmartxStatus.STATUS.SMARTX_STATUS_MINING) {
+                if (DataBase.G_Status.GetStatus() == SmartxStatus.STATUS.SMARTX_STATUS_NORMAL ||
+                        DataBase.G_Status.GetStatus() == SmartxStatus.STATUS.SMARTX_STATUS_MINING) {
                     long tm = System.currentTimeMillis();
                     String timeStamp = Tools.TimeStamp2DateEx(tm);
                     int time = Integer.parseInt(timeStamp.substring(17)) % (SmartxEpochTime.MAIN_CHAIN_PERIOD / 1000);
                     if (blk == null && time > SmartxEpochTime.G_STARTS[0] && time < SmartxEpochTime.G_STARTS[1]) {
-                        DoSyncBlock();
-                        DoRuleQuery(top.GetTopBlock());
-                        blk = DoMineBlock(time);
+                        blk = DoMineBlock();
                         BlockStats.blk = blk;
                         if (null == blk) {
-                            log.warn("create block error, height:" + top.GetTopBlock().height + " mctop:" + top.GetMCTopBlock().header.hash + " top:" + top.GetTopBlock().header.hash);
-                            SmartxEpochTime.Sleep(1000);
+                            log.warn("mining block failure, not find the main block height:" + top.GetMCBlock().height + " mctop:" + top.GetMCBlock().header.hash + " top:" + top.GetMCBlock().header.hash);
+                            SmartxEpochTime.Sleep(5000);
                             continue;
                         }
-                        Block selftop = top.GetTopBlock();
-                        Block mctop = tvblock.GetMCBlock(selftop, smartxdb.GetDbtype(selftop));
-                        top.SetMCTopBlock(mctop);
                         poolThread.doMiningWork(blk);
                     }
                     if (blk != null && time < SmartxEpochTime.G_STARTS[1]) {
                         poolThread.doMiningWork(blk);
-                        tvblock.UpdateCache();
                     }
                     if (blk != null && Tools.isEmpty(blk.header.hash) && time > SmartxEpochTime.G_STARTS[1]) {
                         String random = poolThread.getMiningWork(blk);
@@ -276,7 +204,7 @@ public class GeneralMine implements Runnable {
                         SaveBlock(blk);
                         minePowerOur.computingPower(blk);
                         msghandle.BroadCastMBlock(blk);
-                        top.SetTopBlock(blk);
+                        poolThread.clients.clear();
                         blk = null;
                     }
                 }

@@ -23,7 +23,7 @@ public class SatPeerManager {
         url += Tools.getURLEncoderString(json);
         return HttpClientUtil.httpClientCall(url, 5000, "utf-8");
     }
-    public Message QueryMessageV1(String url, Message message) {
+    public Message QueryMessageV1(String url, Message message) throws Exception {
         try {
             String content = "";
             Gson gson = new GsonBuilder().create();
@@ -31,7 +31,7 @@ public class SatPeerManager {
             url = "http://" + url;
             url += "/v1.0.0/getmine-task?json=";
             url += json;
-            content = HttpClientUtil.httpClientCall(url, 5000, "utf-8");
+            content = HttpClientUtil.httpClientCallException(url, 5000, "utf-8");
             GetMineTaskResponse response = gson.fromJson(content, new TypeToken<GetMineTaskResponse>() {
             }.getType());
             Message resp = Message.FromJson(Tools.getURLDecoderString(response.getResult().getJson()));
@@ -40,7 +40,8 @@ public class SatPeerManager {
             }
         } catch (Exception e) {
             //e.printStackTrace();
-            return null;
+            //treturn null;
+            throw e;
         }
         return null;
     }

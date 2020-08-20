@@ -10,10 +10,7 @@ import org.apache.log4j.Logger;
 import com.smartx.block.Block;
 import com.smartx.block.Field;
 import com.smartx.config.SystemProperties;
-import com.smartx.core.blockchain.BlockDAG;
-import com.smartx.core.blockchain.SATObjFactory;
-import com.smartx.core.blockchain.SatPeerManager;
-import com.smartx.core.blockchain.TraverBlock;
+import com.smartx.core.blockchain.*;
 import com.smartx.core.consensus.ErrCode;
 import com.smartx.core.consensus.SatException;
 import com.smartx.core.consensus.SmartxEpochTime;
@@ -32,27 +29,46 @@ public class MessageHandle {
         SATObjFactory.GetChannelMrg().RegMessage(SmartXMessage.MESSAGE_QUERY_BLOCK_ALL, this, "OnQueryBlockAll");
         SATObjFactory.GetChannelMrg().RegMessage(SmartXMessage.MESSAGE_QUERY_BLOCK_MC, this, "OnQueryBlockMC");
         SATObjFactory.GetChannelMrg().RegMessage(SmartXMessage.MESSAGE_QUERY_MINE_HEIGHT, this, "OnQueryMineHeight");
-        //SATObjFactory.GetChannelMrg().RegMessage(SmartXMessage.MESSAGE_NEW_MINE_TASK,this,"OnNewMineTask");
-        //SATObjFactory.GetChannelMrg().RegMessage(SmartXMessage.MESSAGE_GET_MINE_TASK,this,"OnGetMineTask");
     }
     public Channel GetNodeBest() throws Exception {
         String Max = "0";
-        Channel temp = null;
+        Channel chantemp = null;
         List<Channel> list = SATObjFactory.GetChannelMrg().getActiveChannels();
         for (Channel c : list) {
             String stmp = getLatestHeightRemote(c);
             if (stmp.compareTo(Max) > 0) {
                 Max = stmp;
-                temp = c;
+                chantemp = c;
             }
         }
         // 断线重连
-        if (temp == null) {
+        if (chantemp == null) {
             SATObjFactory.kernel.getNodeManager().stop();
             SATObjFactory.kernel.getNodeManager().start();
             SmartxEpochTime.Sleep(2000);
         }
-        return temp;
+        return chantemp;
+    }
+    public void CheckChannel(){
+        List<Channel> list = SATObjFactory.GetChannelMrg().getActiveChannels();
+        if (list.size() == 0) {
+            SATObjFactory.kernel.getNodeManager().stop();
+            SATObjFactory.kernel.getNodeManager().start();
+            SmartxEpochTime.Sleep(500);
+        }
+    }
+    public long GetHeightBest(){
+        try {
+            Channel c = GetNodeBest();
+            if (c == null) return 0;
+            String maxheight = getLatestHeightRemote(c);
+            if (maxheight !=null && !maxheight.equals("") && !maxheight.equals("0")){
+                return Long.parseLong(maxheight);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return 0;
     }
     // 获得最新的高度
     public String getLatestHeightRemote(Channel channel) throws Exception {
@@ -65,27 +81,31 @@ public class MessageHandle {
         }
         return "";
     }
-    // 广播主单元以及主单元下面引用的所有交易
+    // 广播MC引用的所有tx和MC引用的所有MC
     public void BroadCastMBlock(Block blk) throws Exception {
         TransDB smartxdb = SATObjFactory.GetTxDB();
-        long timenum = SmartxEpochTime.GetCurTimeNum();
         SmartXMessage message = new SmartXMessage(SmartXMessage.MESSAGE_ADD_BLOCK);
         message.msg.collection.mblock = blk;
-        // TODO 这里是生效的 极端情况下还有时序依赖问题
+        if (message.msg.args != null)
+            message.msg.args.put("id", SATObjFactory.kernel.getClient().getPeerId());
         try {
-            //引用T-1块M块不广播
+            if (blk.header.btype == Block.BLKType.SMARTX_TXS){
+                Broadcast(message);
+                return;
+            }
             for (int i = 0; i < blk.Flds.size(); i++) {
                 if (Field.FldType.SAT_FIELD_OUT == blk.Flds.get(i).type) {
                     String hash = blk.Flds.get(i).hash;
-                    // 在DB查询是否存在
-                    int dbtype = smartxdb.GetDbtype(hash);
-                    Block tmpblk = smartxdb.GetBlock(hash, dbtype);
+                    Block tmpblk = smartxdb.GetBlock(hash, DataBase.SMARTX_BLOCK_HISTORY);
                     if (tmpblk == null) {
                         throw new SatException(ErrCode.SAT_BLOCKREF_ERROR, "[" + hash + "] isn't exist in db");
                     }
-                    if ((tmpblk.header.btype == Block.BLKType.SMARTX_MAIN || tmpblk.header.btype == Block.BLKType.SMARTX_MAINREF) && tmpblk.timenum != timenum) {
-                        //logger.warn("M Block isn't broadcast warning");
-                        continue;
+                    if (tmpblk.header.btype == Block.BLKType.SMARTX_MAIN || tmpblk.header.btype == Block.BLKType.SMARTX_MAINREF){
+//                        for (int j=0; j<tmpblk.Flds.size(); j++){
+//                            Block txblock = smartxdb.GetBlock(tmpblk.Flds.get(j).hash, DataBase.SMARTX_BLOCK_HISTORY);
+//                            if (txblock == null) continue;
+//                            message.msg.collection.blocks.add(txblock);
+//                        }
                     }
                     message.msg.collection.blocks.add(tmpblk);
                 }
@@ -139,8 +159,10 @@ public class MessageHandle {
     public void OnAddBlocks(Channel channel, Message msg) throws Exception {
         BlockDAG blkdag = SATObjFactory.GetBlockDAG();
         SmartXMessage message = (SmartXMessage) msg;
-        if (message.msg.args != null && message.msg.args.get("ip") != null) {
-            // 判断有没有回路
+        if (message.msg.args != null && message.msg.args.get("id") != null) {
+            Tools.broadcastID(message.msg.args.get("id"),
+                    SATObjFactory.kernel.getClient().getPeerId());
+
         }
         if (message.msg.collection != null && message.msg.collection.mblock != null) {
             if (message.msg.collection.blocks != null && message.msg.collection.blocks.size() > 0) {
@@ -169,7 +191,7 @@ public class MessageHandle {
     public void OnQueryBlock(Channel channel, Message message) throws Exception {
         String hash = ((SmartXMessage) message).msg.args.get("hash");
         TransDB txdb = SATObjFactory.GetTxDB();
-        Block blk = txdb.GetBlock(hash, txdb.GetDbtype(hash));
+        Block blk = txdb.GetBlock(hash, DataBase.SMARTX_BLOCK_HISTORY);
         SmartXMessage resp = new SmartXMessage();
         resp.msg.txs = Collections.synchronizedList(new ArrayList<Block>());
         resp.msg.txs.add(blk);

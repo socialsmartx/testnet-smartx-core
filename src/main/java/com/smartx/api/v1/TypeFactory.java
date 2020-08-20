@@ -50,7 +50,7 @@ public class TypeFactory {
     public static TransactionType transactionType(String hash, String from, String to, long timestamp, BigInteger fee, BigInteger amount) {
         return new TransactionType().hash(hash).from(from).to(to).fee(fee.toString()).value(amount.toString()).timestamp(Long.toString(timestamp));
     }
-    public static BlockType blockType(Block block) throws SatException, SQLException, SignatureException {
+    public static BlockType blockType(Block block) {
         int txCount = 0;
         TraverBlock traverBlock = SATObjFactory.GetTraveBlock();
         //height fee amount difficulty
@@ -70,6 +70,7 @@ public class TypeFactory {
                 txCount = traverBlock.GetBlockRef(block).size();
                 blockType.transactionCount(txCount);
                 blockType.reward(block.rewards.toString());
+                blockType.nodename(block.nodename);
                 break;
             case SMARTX_MAINREF:
                 //如果是普通主块则返回难度，交易数，出块奖励
@@ -77,6 +78,7 @@ public class TypeFactory {
                 txCount = traverBlock.GetBlockRef(block).size();
                 blockType.transactionCount(txCount);
                 blockType.reward(block.rewards.toString());
+                blockType.nodename(block.nodename);
                 break;
             case SMARTX_TXS:
                 //如果是交易块则返回from to amount fee
@@ -86,6 +88,7 @@ public class TypeFactory {
                 blockType.to(outField.hash);
                 blockType.amount(outField.amount.toString());
                 blockType.fee(outField.fee.toString());
+                blockType.nodename(block.nodename);
                 break;
         }
         return blockType;

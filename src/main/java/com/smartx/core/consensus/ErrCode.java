@@ -21,4 +21,5 @@ public class ErrCode {
     public static int SAT_CHECKRANDOM_ERROR = 1120;
     public static int SAT_RULEBACKERFER_ERROR = 2001;
     public static int SAT_TRANSFER_AMOUNT_ERROR = 2002;
+    public static int SAT_TRANSFER_IN_ERROR = 2003;
 }

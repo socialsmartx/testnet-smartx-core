@@ -47,9 +47,11 @@ public class SmartxCommands implements PubSubSubscriber {
     private static long totalheight = 1;
     private static final String myWalletDir;
     public static long totalblocks = 0;
+
     public SmartxCommands() {
         pubSub.subscribe(this, GetHeightEvent.class);
     }
+
     static {
         String path = System.getProperty("user.dir");
         if (OSInfo.isWindows()) {
@@ -58,6 +60,7 @@ public class SmartxCommands implements PubSubSubscriber {
             myWalletDir = path + "/MyWallet/";
         }
     }
+
     public void onPubSubEvent(PubSubEvent event) {
         String json = event.GetMessage();
         Message message = Message.FromJson(json);
@@ -69,9 +72,11 @@ public class SmartxCommands implements PubSubSubscriber {
             totalheight = Long.parseLong(message.args.get("height"));
         }
     }
+
     public static void Mining() {
         GeneralMine.g_stop_general_mining = !GeneralMine.g_stop_general_mining;
     }
+
     public static String Status() {
         String info = "";
         if (DataBase.G_Status.GetStatus() == SmartxStatus.STATUS.SMARTX_STATUS_INIT) {
@@ -89,6 +94,17 @@ public class SmartxCommands implements PubSubSubscriber {
         }
         return info;
     }
+
+    public static String ShowBalance(String address) {
+        QueryDB querydb = SATObjFactory.GetQueryDB();
+        try {
+            return querydb.ShowBalance(address);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "";
+    }
+
     public static String ShowBalance() {
         QueryDB querydb = SATObjFactory.GetQueryDB();
         try {
@@ -98,6 +114,7 @@ public class SmartxCommands implements PubSubSubscriber {
         }
         return "";
     }
+
     public static String GetCoinBase() {
         if (SmartXWallet.wallettype == SmartXWallet.SECP_WALLETTYPE) {
             return SmartxCore.G_Wallet.getAddress();
@@ -107,6 +124,7 @@ public class SmartxCommands implements PubSubSubscriber {
         }
         return "";
     }
+
     public static void SetCoinBase(String value) {
         if (SmartXWallet.wallettype == SmartXWallet.SECP_WALLETTYPE) {
             SmartXWallet wallet = SmartxCore.GetWallet(value);
@@ -121,7 +139,8 @@ public class SmartxCommands implements PubSubSubscriber {
             }
         }
     }
-    public void tested25519() throws SatException, SQLException, IOException {
+
+    public void Tested25519() {
         // setUp();
         File file = new File("c:\\www\\wallet.dat");
         Key25519 wallet = new Key25519(file, "mainnet");
@@ -142,12 +161,14 @@ public class SmartxCommands implements PubSubSubscriber {
         //String base58EncodeSign = Base58.base58Encode(sigstr);
         System.out.println(Key25519.verify(base58EncodeHash, sigstr, srckey.toAddressString()));
     }
+
     public static String ShowStats() throws SatException, SQLException {
         BlockStats.GetStats();
         BlockStats.GetPointer();
-        String info = String.format("Statistics for ours and maximum known parameters:\n " + "Total Blocks: %d\n " + "Height: %d\n" + " syncing %d\n" + " role:%d\n" + " Now top block: %s\n" + " Now MC block: %s\n" + " 4hr hashrate: %s of %s", BlockStats.Ntotal, totalheight, syncheight, SystemProperties.getDefault().getRole(), BlockStats.GetTopHash(), BlockStats.GetMctopHash(), GeneralMine.minePowerOur.GetPower(), GeneralMine.minePowerTotal.GetPower());
+        String info = String.format("Statistics for ours and maximum known parameters:\r\n " + "Total Blocks: %d\r\n " + "Height: %d\r\n" + " syncing %d\r\n" + " role:%d\r\n" + " Now top block: %s\r\n" + " Now MC block: %s\r\n" + " 4hr hashrate: %s of %s", BlockStats.Ntotal, totalheight, syncheight, SystemProperties.getDefault().getRole(), BlockStats.GetTopHash(), BlockStats.GetMctopHash(), GeneralMine.minePowerOur.GetPower(), GeneralMine.minePowerTotal.GetPower());
         return info;
     }
+
     public static void SortBlockFront(String value) {
         try {
             if (!value.equals("")) {
@@ -163,15 +184,18 @@ public class SmartxCommands implements PubSubSubscriber {
             log.error(e.toString());
         }
     }
-    public void SortBlock(String count) {
+
+    public static void SortBlock(String count) {
         TraverBlock tvblock = SATObjFactory.GetTravBlock();
         tvblock.SortBlockBack(Integer.parseInt(count));
     }
+
     public void ShowMcBlock(long height) {
         BlockDAG blockdag = SATObjFactory.GetBlockDAG();
         Block blk = blockdag.GetMCBlock(height);
         System.out.println(Tools.ToJson(blk));
     }
+
     public void CreateAccount(String value) {
         SmartxCore core = new SmartxCore();
         if (SmartXWallet.wallettype == SmartXWallet.SECP_WALLETTYPE) {
@@ -183,6 +207,7 @@ public class SmartxCommands implements PubSubSubscriber {
             SmartxCore.G_Wallet.fastkeys.flush();
         }
     }
+
     public static String list_accounts() {
         try {
             String info = "";
@@ -208,7 +233,7 @@ public class SmartxCommands implements PubSubSubscriber {
                 List<Key> keys = SmartxCore.G_Wallet.fastkeys.getAccounts();
                 for (int i = 0; i < keys.size(); i++) {
                     info += keys.get(i).toAddressString();
-                    info += "\n";
+                    info += "\r\n";
                     System.out.println(keys.get(i).toAddressString());
                 }
                 return info;
@@ -218,72 +243,24 @@ public class SmartxCommands implements PubSubSubscriber {
         }
         return "";
     }
+
     public void quit() {
         System.out.println("quit now");
         System.exit(0);
     }
+
     public static String help() {
         return String.format("	stats - stats important parameters of statistical system\n" + "	help - help guide\n" + "	mining - start or stop system mining\n" + "	block - view block information\n" + "	state - show the system status info\n" + "	account - look accounts in dir\n" + "	create - create a account\n" + "	exit - exit the smartx \n" + "	balance - get all user balance\n" + "	main - show latest main block\n" + "	setcoinbase - set the mining address\n" + "	getcoinbase - get the mining address\n" + "	xfer - power transfer tools\n" + "	net - show p2p network infomation");
     }
-    public static String Transfer(String to, String amount) {
-        try {
-            long xferamount = Long.parseLong(amount);
-            Block blk = MakeTransfer(to, xferamount);
-            BlockDAG blkdag = SATObjFactory.GetBlockDAG();
-            blkdag.AddBlock(blk);
-            return blk.header.hash;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return "";
-    }
-    public static Block MakeTransfer(String to, long amount) throws SatException, SignatureException {
-        BlockMainTop top = SATObjFactory.GetMainTop();
-        Block topblk = top.GetTopBlock();
-        if (null == to || to.equals("")) return null;
-        long tm = SmartxEpochTime.get_timestamp();
-        Block blk = new Block();
-        blk.header.headtype = 1;
-        blk.header.btype = Block.BLKType.SMARTX_TXS;
-        blk.header.timestamp = tm;
-        blk.time = Tools.TimeStamp2DateEx(tm);
-        blk.epoch = SmartxEpochTime.EpochTime(SmartxEpochTime.StrToStamp(blk.time));
-        assert SmartxCore.G_Wallet != null;
-        if (SmartXWallet.wallettype == SmartXWallet.FAST_WALLETTYPE)
-            blk.header.address = SmartxCore.G_Wallet.getFastAddress();
-        else blk.header.address = SmartxCore.G_Wallet.getAddress();
-        blk.timenum = SmartxEpochTime.CalTimeEpochNum(tm);
-        blk.header.nonce = Tools.getUUID();
-        blk.header.amount = new BigInteger("0");
-        blk.nodename = DataBase.G_NAME;
-        blk.diff = "1";
-        blk.header.random = "1";
-        Field fieldfrom = new Field();
-        fieldfrom.amount = BigInteger.valueOf(amount);
-        fieldfrom.type = Field.FldType.SAT_FIELD_IN;
-        fieldfrom.hash = SmartxCore.G_Wallet.getRealAddress();
-        Field fieldto = new Field();
-        fieldto.amount = BigInteger.valueOf(amount);
-        fieldto.type = Field.FldType.SAT_FIELD_OUT;
-        fieldto.hash = to;
-        blk.Flds.add(fieldfrom);
-        blk.Flds.add(fieldto);
-        blk.header.hash = Sha256.getH256(blk);
-        BlockDAG blockdag = SATObjFactory.GetBlockDAG();
-        blk.sign = blockdag.SignBlock(blk.header.hash, SmartxCore.G_Wallet);
-        //boolean result = Key25519.verify2(blk.ToSignStringBase58(), blk.sign, blk.header.address);
-        log.info("------------------------------------------------------------------------------");
-        log.info("TXS_create:[" + blk.time + "] " + blk.header.hash);
-        return blk;
-    }
+
     public static String shownet() {
         String info = "";
         try {
             List<Channel> list = SATObjFactory.GetChannelMrg().getActiveChannels();
-            System.out.println("node count " + list.size());
+            info += "node count " + list.size() +"\r\n";
             for (Channel c : list) {
                 info += c.toString();
-                info += "\n";
+                info += "\r\n";
             }
         } catch (Exception e) {
             e.printStackTrace();

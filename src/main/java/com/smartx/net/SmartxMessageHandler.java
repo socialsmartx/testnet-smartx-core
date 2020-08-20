@@ -58,7 +58,7 @@ public class SmartxMessageHandler extends MessageToMessageCodec<Frame, Message> 
         int packetId = count.incrementAndGet();
         int packetSize = dataCompressed.length;
         if (data.length > config.netMaxPacketSize() || dataCompressed.length > config.netMaxPacketSize()) {
-            logger.error(String.format("Invalid packet size, max = {%d}, actual = {%d}", config.netMaxPacketSize(), packetSize));
+            logger.error(String.format("Invalid packet size, max = {%d}, actual = {%d}, body={%d}", config.netMaxPacketSize(), packetSize, data.length));
             return;
         }
         int limit = config.netMaxFrameBodySize();

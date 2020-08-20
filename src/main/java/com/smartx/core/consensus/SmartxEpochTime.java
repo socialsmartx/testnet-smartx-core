@@ -10,9 +10,9 @@ import com.smartx.core.blockchain.DataBase;
 import com.smartx.util.Tools;
 
 public class SmartxEpochTime {
-    private static final int BLOCK_REFER_TIME = 5;
-    private static final int BLOCK_BROADCAST_TIME = 15;
-    public static final int RULESIGN_TIME = 20;
+    private static final int BLOCK_REFER_TIME = 0;
+    private static final int BLOCK_BROADCAST_TIME = 26;
+    public static final int RULESIGN_TIME = 28;
     public static int G_STARTS[] = new int[3];
     public static int MAIN_CHAIN_PERIOD = 1000 * 30;    // 30s
     static {

@@ -35,7 +35,7 @@ public class DataSet {
             }
         }
     }
-    public int getRows(final String sql) throws SQLException, SatException {
+    public int getRows(String sql) throws SQLException, SatException {
         logger.debug("ds getrow: [" + sql + "]");
         int rowcount = 0;
         if (this.rs != null) {
@@ -109,12 +109,13 @@ public class DataSet {
                 return false;
             }
         } catch (final SQLException e) {
+            e.printStackTrace();
             logger.error("error: " + e);
             return false;
         }
         return true;
     }
-    public boolean addBatch(final String sql) {
+    public boolean addBatch(String sql) {
         try {
             if (this.statement == null) {
                 this.statement = this.dbconnct.CreateStatement();
@@ -145,7 +146,7 @@ public class DataSet {
         }
         return true;
     }
-    public boolean Init(final String sql) {
+    public boolean Init(String sql) {
         logger.debug("ds open: [" + sql + "]");
         synchronized (this) {
             if (this.rs != null) {
@@ -180,14 +181,19 @@ public class DataSet {
                     ex.printStackTrace();
                     return false;
                 }
-            } catch (final SQLException e) {
+            } catch (SQLException e) {
                 logger.error("error: " + e);
+                String sqlState = e.getSQLState();
+                e.printStackTrace();
+                if ("08007".equals(sqlState) || "08S01".equals(sqlState) || "40001".equals(sqlState)) {
+                    logger.error("Note: must reconnect to mysql");
+                }
                 return false;
             }
             return true;
         }
     }
-    public boolean excAffect(final String sql, final int line) {
+    public boolean excAffect(String sql, int line) {
         synchronized (this) {
             try {
                 int ret = 0;
@@ -195,48 +201,61 @@ public class DataSet {
                 if (this.statement == null) {
                     if (0 == SATObjFactory.GetDbSource().GetDBType()) {
                         this.statement = this.dbconnct.prepareStatement(sql); //mysql
+                        ret = this.statement.executeUpdate(sql);
                     } else if (1 == SATObjFactory.GetDbSource().dbtype) {
                         this.statement = this.dbconnct.CreateStatement(); // sqlite
+                        ret = this.statement.executeUpdate(sql);
                     }
-                    ret = this.statement.executeUpdate(sql);
                 } else {
                     ret = this.statement.executeUpdate(sql);
                 }
+                //if (!dbconnct.conn.getAutoCommit())
+                //    dbconnct.Commit();
                 if (ret != line) {
                     logger.error("error: effect : " + ret);
                     return false;
                 }
-            } catch (final SQLException e) {
+            } catch (SQLException e) {
                 logger.error("errcode:" + e.getErrorCode());
+                String sqlState = e.getSQLState();
                 e.printStackTrace();
+                if ("08007".equals(sqlState) || "08S01".equals(sqlState) || "40001".equals(sqlState)) {
+                    logger.error("Note: must reconnect to mysql");
+                }
                 return false;
             } finally {
-                try {
-                    this.statement.close();
-                } catch (final SQLException e) {
-                    e.printStackTrace();
-                }
-                this.statement = null;
+//                try {
+//                    this.statement.close();
+//                } catch (final SQLException e) {
+//                    e.printStackTrace();
+//                }
+//                this.statement = null;
             }
             return true;
         }
     }
-    public boolean excute(final String sql) {
+    public boolean excute(String sql) {
         synchronized (this) {
             try {
                 logger.debug("ds excute: [" + sql + "]");
                 if (this.statement == null) {
                     if (0 == SATObjFactory.GetDbSource().GetDBType()) {
                         this.statement = this.dbconnct.prepareStatement(sql);
+                        this.statement.executeUpdate(sql);
                     } else if (1 == SATObjFactory.GetDbSource().GetDBType()) {
                         this.statement = this.dbconnct.CreateStatement();
+                        this.statement.executeUpdate(sql);
                     }
-                    this.statement.executeUpdate(sql);
                 } else {
                     this.statement.executeUpdate(sql);
                 }
-            } catch (final SQLException e) {
+                //if (!dbconnct.conn.getAutoCommit()) dbconnct.Commit();
+            } catch (SQLException e) {
                 logger.error("error: " + e);
+                String sqlState = e.getSQLState();
+                if ("08007".equals(sqlState) || "08S01".equals(sqlState) || "40001".equals(sqlState)) {
+                    logger.error("NOTE: must reconnect to mysql!!");
+                }
                 return false;
             } finally {
                 try {

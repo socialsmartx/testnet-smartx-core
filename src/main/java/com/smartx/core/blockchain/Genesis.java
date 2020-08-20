@@ -2,6 +2,7 @@ package com.smartx.core.blockchain;
 
 import java.math.BigInteger;
 import java.security.SignatureException;
+import java.sql.SQLException;
 
 import org.apache.log4j.Logger;
 import org.junit.Test;
@@ -19,6 +20,7 @@ import com.smartx.crypto.HashUtil;
 import com.smartx.crypto.Sha256;
 import com.smartx.db.DBConnection;
 import com.smartx.db.DataDB;
+import com.smartx.db.QueryDB;
 import com.smartx.db.TransDB;
 import com.smartx.message.Dictionary;
 import com.smartx.util.Tools;
@@ -113,8 +115,7 @@ public class Genesis {
         return blk;
     }
     public Block GetFastRuleGenesis(Block blk) throws Exception {
-        final RuleExecutor executor = SATObjFactory.GetExecutor();
-        final TransDB smartxdb = SATObjFactory.GetTxDB();
+        RuleExecutor executor = SATObjFactory.GetExecutor();
         blk = executor.ruleSignBlock(blk);
         blk.height = ++this.height;
         if (executor.verifyRuleSignBlock(blk)) log.info(" rulesign is ok");
@@ -148,45 +149,56 @@ public class Genesis {
         System.out.println("verify result is " + result);
     }
     @Test
-    public void ReadToJson() throws Exception {
-        final SmartxCore core = new SmartxCore();
+    public void GenSignForJson() throws SatException, SQLException, SignatureException {
+        SmartxCore core = new SmartxCore();
         core.InitStorage();
         core.ReadConfig();
-        final TransDB txdb = SATObjFactory.GetTxDB();
-        final Block MC = txdb.GetBlock("299e20c050b3f9c0d572c852978b2a241ce182725a1b38a05bde2e7e7df09ebe", DataBase.SMARTX_BLOCK_HISTORY);
-        final Block block = txdb.GetBlock("a36b410bf95d00fccf7eb88dd2cc372c8de3e457d32fb2e8b1227f7552cbaa8e", DataBase.SMARTX_BLOCK_HISTORY);
-        final String mcjson = Tools.ToJson(MC);
-        final String blockjson = Tools.ToJson(block);
+        BlockDAG blockdag = SATObjFactory.GetBlockDAG();
+        TransDB txdb = SATObjFactory.GetTxDB();
+        Block MC = txdb.GetBlock("299e20c050b3f9c0d572c852978b2a241ce182725a1b38a05bde2e7e7df09ebe", DataBase.SMARTX_BLOCK_HISTORY);
+        Block block = txdb.GetBlock("a36b410bf95d00fccf7eb88dd2cc372c8de3e457d32fb2e8b1227f7552cbaa8e", DataBase.SMARTX_BLOCK_HISTORY);
+        blockdag.VerifySign(MC);
+        blockdag.VerifySign(block);
+    }
+    @Test
+    public void ReadToJson() throws Exception {
+        SmartxCore core = new SmartxCore();
+        core.InitStorage();
+        core.ReadConfig();
+        TransDB txdb = SATObjFactory.GetTxDB();
+        Block MC = txdb.GetBlock("299e20c050b3f9c0d572c852978b2a241ce182725a1b38a05bde2e7e7df09ebe", DataBase.SMARTX_BLOCK_HISTORY);
+        Block block = txdb.GetBlock("a36b410bf95d00fccf7eb88dd2cc372c8de3e457d32fb2e8b1227f7552cbaa8e", DataBase.SMARTX_BLOCK_HISTORY);
+        String mcjson = Tools.ToJson(MC);
+        String blockjson = Tools.ToJson(block);
         Tools.WriteFile("c:\\mc.json", mcjson);
         Tools.WriteFile("c:\\block.json", blockjson);
     }
     @Test
     public void WriteFromJson() throws Exception {
-        final SmartxCore core = new SmartxCore();
+        SmartxCore core = new SmartxCore();
         core.InitStorage();
-        final TransDB txdb = SATObjFactory.GetTxDB();
-        final String MCjson = Tools.ReadFile("c:\\mc.json");
-        final String blockjson = Tools.ReadFile("c:\\block.json");
-        final Block MC = Tools.FromJson(MCjson);
-        final Block block = Tools.FromJson(blockjson);
-        // DbSource dbsrc = SATObjFactory.GetDbSource();
-        // String sql = "create database IF NOT EXISTS " + dbsrc.GetDBName();
-        // DataSet dt = new DataSet(DataDB.m_DBConnet);
-        // dt.excute(sql);
+        QueryDB querydb = SATObjFactory.GetQueryDB();
+        querydb.ClearCache(DataBase.SMARTX_BLOCK_HISTORY);
+        TransDB txdb = SATObjFactory.GetTxDB();
+        String MCjson = Tools.ReadFile("c:\\mc.json");
+        String blockjson = Tools.ReadFile("c:\\block.json");
+        Block MC = Tools.FromJson(MCjson);
+        Block block = Tools.FromJson(blockjson);
         txdb.SaveBlock(MC, DataBase.SMARTX_BLOCK_HISTORY);
         txdb.SaveBlock(block, DataBase.SMARTX_BLOCK_HISTORY);
+        log.info("succed");
     }
     @Test
     public void TestFastCreateGenesis() throws Exception {
-        final SmartxCore core = new SmartxCore();
-        final SmartXCli cli = new SmartXCli();
-        final BlockDAG blockdag = SATObjFactory.GetBlockDAG();
+        SmartxCore core = new SmartxCore();
+        SmartXCli cli = new SmartXCli();
+        BlockDAG blockdag = SATObjFactory.GetBlockDAG();
         DataBase.genesisEpoch = Long.parseLong(core.config.getGenesisEpoch());
         DataBase.genesisDate = core.config.getGenesisDate();
         System.out.println("epoch:" + DataBase.genesisEpoch);
-        final int flag = 1;
+        int flag = 1;
         DataDB.m_DBConnet = new DBConnection();
-        final int dbtype = 0;
+        int dbtype = 0;
         SATObjFactory.GetDbSource().SetDBType(0);
         if (1 == dbtype) {
             if (!DataDB.m_DBConnet.CreateSqlite("smartx.db")) {
@@ -194,7 +206,7 @@ public class Genesis {
                 System.exit(0);
             }
         } else if (0 == dbtype) {
-            final Dictionary dict = SystemProperties.getDefault().getMysqlConf();
+            Dictionary dict = SystemProperties.getDefault().getMysqlConf();
             if (!DataDB.m_DBConnet.CreateMysql(dict.args.get("connection"), dict.args.get("username"), dict.args.get("password"))) {
                 log.error("connection to database error!");
                 System.exit(0);
@@ -202,39 +214,39 @@ public class Genesis {
         }
         DataBase.InitDBTable();
         DataBase.password = "123";
-        final Key25519 key = cli.loadAndUnlockWallet();
-        final TransDB txdb = SATObjFactory.GetTxDB();
+        Key25519 key = cli.loadAndUnlockWallet();
+        TransDB txdb = SATObjFactory.GetTxDB();
         SmartxCore.G_Wallet = new SmartXWallet();
         SmartxCore.G_Wallet.baseKey = key.getAccount(0);
         if (flag == 0) {
             Block blk = CreateFastGenesis();
-            final BigInteger amount = new BigInteger("100000000000000");
-            final BigInteger fee = new BigInteger("0");
-            final Block txblk = InitGensisTxBlock(amount, fee);
+            BigInteger amount = new BigInteger("100000000000000");
+            BigInteger fee = new BigInteger("0");
+            Block txblk = InitGensisTxBlock(amount, fee);
             txblk.sign = blockdag.SignBlock(txblk.ToSignString(), SmartxCore.G_Wallet);
             txdb.SaveBlock(txblk, DataBase.SMARTX_BLOCK_HISTORY);
             blk = BlockMainTop.InitRefField(blk, txblk);
             txdb.SaveBlock(blk, DataBase.SMARTX_BLOCK_HISTORY);
         } else if (flag == 1) {
-            final int type = txdb.GetDbtype("af6a89cbec692e476544ac8adb9b34e6b355442fac4cc93867805053ffc7560d");
-            final Block blk = txdb.GetBlock("af6a89cbec692e476544ac8adb9b34e6b355442fac4cc93867805053ffc7560d", type);
+            int type = txdb.GetDbtype("af6a89cbec692e476544ac8adb9b34e6b355442fac4cc93867805053ffc7560d");
+            Block blk = txdb.GetBlock("af6a89cbec692e476544ac8adb9b34e6b355442fac4cc93867805053ffc7560d", type);
             GetFastRuleGenesis(blk);
             txdb.SaveRuleSign(blk, DataBase.SMARTX_BLOCK_HISTORY);
         }
     }
     @Test
     public void TestCreateGenesis() throws Exception {
-        final SmartxCore core = new SmartxCore();
-        final BlockDAG blockdag = SATObjFactory.GetBlockDAG();
+        SmartxCore core = new SmartxCore();
+        BlockDAG blockdag = SATObjFactory.GetBlockDAG();
         //core.InitStorage();
         core.ReadConfig();
         DataBase.genesisEpoch = Long.parseLong(core.config.getGenesisEpoch());
         DataBase.genesisDate = core.config.getGenesisDate();
         System.out.println("epoch:" + DataBase.genesisEpoch);
         DataDB.m_DBConnet = new DBConnection();
-        final int dbtype = SATObjFactory.GetDbSource().GetDBType();
+        int dbtype = SATObjFactory.GetDbSource().GetDBType();
         if (0 == dbtype) {
-            final Dictionary dict = SystemProperties.getDefault().getMysqlConf();
+            Dictionary dict = SystemProperties.getDefault().getMysqlConf();
             if (!DataDB.m_DBConnet.CreateMysql(dict.args.get("connection"), dict.args.get("username"), dict.args.get("password"))) {
                 log.error("connection to database error!");
                 System.exit(0);
@@ -246,18 +258,18 @@ public class Genesis {
             }
             DataBase.InitDBTable();
         }
-        final String path = Tools.GetWalletPath();
+        String path = Tools.GetWalletPath();
         try {
             SmartxCore.G_Wallet = SmartXWallet.fromKeyStore("123", path);
-        } catch (final Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
             throw new SatException(ErrCode.INIT_GENESIS_ERROR, "Init genesis block key error");
         }
-        final TransDB txdb = SATObjFactory.GetTxDB();
+        TransDB txdb = SATObjFactory.GetTxDB();
         Block blk = CreateGenesis();
-        final BigInteger amount = new BigInteger("100000000000000");
-        final BigInteger fee = new BigInteger("0");
-        final Block txblk = InitGensisTxBlock(amount, fee);
+        BigInteger amount = new BigInteger("100000000000000");
+        BigInteger fee = new BigInteger("0");
+        Block txblk = InitGensisTxBlock(amount, fee);
         txblk.sign = blockdag.SignBlock(txblk.ToSignString(), SmartxCore.G_Wallet);
         txdb.SaveBlock(txblk, DataBase.SMARTX_BLOCK_HISTORY);
         blk = BlockMainTop.InitRefField(blk, txblk);

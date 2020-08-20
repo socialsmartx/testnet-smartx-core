@@ -16,19 +16,25 @@ import com.smartx.block.Block;
 import com.smartx.cli.SmartxCommands;
 import com.smartx.core.SmartxCore;
 import com.smartx.core.blockchain.BlockDAG;
+import com.smartx.core.blockchain.DataBase;
 import com.smartx.core.blockchain.SATObjFactory;
 import com.smartx.core.blockchain.TraverBlock;
 import com.smartx.core.consensus.SatException;
 import com.smartx.db.TransDB;
+import com.smartx.event.PubSubEvent;
+import com.smartx.event.PubSubSubscriber;
 import com.smartx.mine.MineThread;
 import com.smartx.mine.PoolThread;
 import com.smartx.util.Tools;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
-public class MessageDispatch implements HttpHandler {
+public class MessageDispatch implements HttpHandler, PubSubSubscriber {
     public String messagejson = "";
     private static final Logger log = Logger.getLogger("core");
+    private BlockDAG blockdag = SATObjFactory.GetBlockDAG();
+    private static long syncheight = 1;
+    private static long totalheight = 1;
     public void packReturn(HttpExchange exchange, String response) throws IOException {
         exchange.sendResponseHeaders(200, 0);
         OutputStream os = exchange.getResponseBody();
@@ -36,6 +42,15 @@ public class MessageDispatch implements HttpHandler {
         os.close();
     }
     public MessageDispatch() {
+    }
+    public void onPubSubEvent(PubSubEvent event) {
+        String json = event.GetMessage();
+        Message message = Message.FromJson(json);
+        if (message.args.get("command").equals(Message.MESSAGE_GET_HEIGHT)) {
+            syncheight = Long.parseLong(message.args.get("height"));
+        } else if (message.args.get("command").equals(Message.MESSAGE_GET_LATESTHEIGHT)) {
+            totalheight = Long.parseLong(message.args.get("height"));
+        }
     }
     public MessageDispatch(String json) {
         messagejson = json;
@@ -89,7 +104,7 @@ public class MessageDispatch implements HttpHandler {
     public String QueryBlock(Message message) throws IOException, SatException, SQLException, SignatureException {
         String hash = message.args.get("hash");
         TransDB txdb = SATObjFactory.GetTxDB();
-        Block blk = txdb.GetBlock(hash, txdb.GetDbtype(hash));
+        Block blk = txdb.GetBlock(hash, DataBase.SMARTX_BLOCK_HISTORY);
         Message resp = new Message();
         resp.txs = Collections.synchronizedList(new ArrayList<Block>());
         resp.txs.add(blk);
@@ -172,23 +187,34 @@ public class MessageDispatch implements HttpHandler {
         }
         return "";
     }
-    public String GetState(Message message) throws IOException, SatException, SQLException, SignatureException {
+    public String GetState(Message message, int type) throws IOException, SatException, SQLException, SignatureException {
         String value = message.args.get("value");
-        Message resp = new Message();
-        resp.args = new HashMap<String, String>();
-        resp.args.put("ret", "0");
-        resp.args.put("res_info", SmartxCommands.Status());
-        String response = Message.ToJson(resp);
-        return Tools.getURLEncoderString(response);
+        if (0 == type) {
+            Message resp = new Message();
+            resp.args = new HashMap<String, String>();
+            resp.args.put("ret", "0");
+            resp.args.put("res_info", SmartxCommands.Status());
+            String response = Message.ToJson(resp);
+            return Tools.getURLEncoderString(response);
+        }
+        else {
+            return SmartxCommands.Status();
+        }
     }
-    public String GetStats(Message message) throws IOException, SatException, SQLException, SignatureException {
+    public String GetStats(Message message, int type) throws IOException, SatException, SQLException, SignatureException {
         String value = message.args.get("value");
-        Message resp = new Message();
-        resp.args = new HashMap<String, String>();
-        resp.args.put("ret", "0");
-        resp.args.put("res_info", SmartxCommands.ShowStats());
-        String response = Message.ToJson(resp);
-        return Tools.getURLEncoderString(response);
+        if (0 == type) {
+            Message resp = new Message();
+            resp.args = new HashMap<String, String>();
+            resp.args.put("ret", "0");
+            resp.args.put("res_info", SmartxCommands.ShowStats());
+            String response = Message.ToJson(resp);
+            return Tools.getURLEncoderString(response);
+        }
+        else {
+            String retinfo = SmartxCommands.ShowStats();
+            return retinfo;
+        }
     }
     public String GetMining(Message message) throws IOException, SatException, SQLException, SignatureException {
         String value = message.args.get("value");
@@ -200,32 +226,47 @@ public class MessageDispatch implements HttpHandler {
         String response = Message.ToJson(resp);
         return Tools.getURLEncoderString(response);
     }
-    public String GetNet(Message message) {
+    public String GetNet(Message message, int type) {
         String value = message.args.get("value");
-        Message resp = new Message();
-        resp.args = new HashMap<String, String>();
-        resp.args.put("ret", "0");
-        resp.args.put("res_info", SmartxCommands.shownet());
-        String response = Message.ToJson(resp);
-        return Tools.getURLEncoderString(response);
+        if (0 == type) {
+            Message resp = new Message();
+            resp.args = new HashMap<String, String>();
+            resp.args.put("ret", "0");
+            resp.args.put("res_info", SmartxCommands.shownet());
+            String response = Message.ToJson(resp);
+            return Tools.getURLEncoderString(response);
+        }
+        else {
+            return SmartxCommands.shownet();
+        }
     }
-    public String GetAccount(Message message) {
+    public String GetAccount(Message message, int type) {
         String value = message.args.get("value");
-        Message resp = new Message();
-        resp.args = new HashMap<String, String>();
-        resp.args.put("ret", "0");
-        resp.args.put("res_info", SmartxCommands.list_accounts());
-        String response = Message.ToJson(resp);
-        return Tools.getURLEncoderString(response);
+        if (0 == type) {
+            Message resp = new Message();
+            resp.args = new HashMap<String, String>();
+            resp.args.put("ret", "0");
+            resp.args.put("res_info", SmartxCommands.list_accounts());
+            String response = Message.ToJson(resp);
+            return Tools.getURLEncoderString(response);
+        }
+        else {
+            return SmartxCommands.list_accounts();
+        }
     }
-    public String GetBalance(Message message) {
+    public String GetBalance(Message message, int type) {
         String value = message.args.get("value");
-        Message resp = new Message();
-        resp.args = new HashMap<String, String>();
-        resp.args.put("ret", "0");
-        resp.args.put("res_info", SmartxCommands.ShowBalance());
-        String response = Message.ToJson(resp);
-        return Tools.getURLEncoderString(response);
+        if (0 == type) {
+            Message resp = new Message();
+            resp.args = new HashMap<String, String>();
+            resp.args.put("ret", "0");
+            resp.args.put("res_info", SmartxCommands.ShowBalance());
+            String response = Message.ToJson(resp);
+            return Tools.getURLEncoderString(response);
+        }
+        else {
+            return SmartxCommands.ShowBalance();
+        }
     }
     public String GetXfer(Message message) {
         String to = message.args.get("to");
@@ -233,7 +274,7 @@ public class MessageDispatch implements HttpHandler {
         Message resp = new Message();
         resp.args = new HashMap<String, String>();
         resp.args.put("ret", "0");
-        resp.args.put("res_info", SmartxCommands.Transfer(to, amount));
+        resp.args.put("res_info", blockdag.Transfer(to, amount));
         String response = Message.ToJson(resp);
         return Tools.getURLEncoderString(response);
     }
@@ -246,6 +287,9 @@ public class MessageDispatch implements HttpHandler {
         resp.args.put("res_info", SmartxCommands.GetCoinBase());
         String response = Message.ToJson(resp);
         return Tools.getURLEncoderString(response);
+    }
+    public String ShowHelp() {
+        return "telnet help 1.0 version";
     }
     public String SetCoinBase(Message message) {
         String value = message.args.get("value");
@@ -265,25 +309,60 @@ public class MessageDispatch implements HttpHandler {
             case Message.MESSAGE_QUERY_RULE:
                 return QueryRuleSign(message);
             case Message.STATE:
-                return GetState(message);
+                return GetState(message, 0);
             case Message.SORT:
                 return GetSort(message);
             case Message.STATS:
-                return GetStats(message);
+                return GetStats(message,0);
             case Message.MINING:
                 return GetMining(message);
             case Message.NET:
-                return GetNet(message);
+                return GetNet(message, 0);
             case Message.ACCOUNT:
-                return GetAccount(message);
+                return GetAccount(message, 0);
             case Message.BALANCE:
-                return GetBalance(message);
+                return GetBalance(message, 0);
             case Message.XFER:
                 return GetXfer(message);
             case Message.GETCOINBASE:
                 return GetCoinBase(message);
             case Message.SETCOINBASE:
                 return SetCoinBase(message);
+            case Message.HELP:
+                return ShowHelp();
+            default:
+        }
+        return "";
+    }
+    public String MessageTelnet() throws SQLException, SignatureException, SatException, IOException {
+        Message message = Message.FromJson(messagejson);
+        if (message == null || message.args == null) return "";
+        String command = message.args.get("command");
+        switch (command) {
+            case Message.MESSAGE_QUERY_RULE:
+                return QueryRuleSign(message);
+            case Message.STATE:
+                return GetState(message, 1);
+            case Message.SORT:
+                return GetSort(message);
+            case Message.STATS:
+                return GetStats(message,1);
+            case Message.MINING:
+                return GetMining(message);
+            case Message.NET:
+                return GetNet(message, 1);
+            case Message.ACCOUNT:
+                return GetAccount(message, 1);
+            case Message.BALANCE:
+                return GetBalance(message, 1);
+            case Message.XFER:
+                return GetXfer(message);
+            case Message.GETCOINBASE:
+                return GetCoinBase(message);
+            case Message.SETCOINBASE:
+                return SetCoinBase(message);
+            case Message.HELP:
+                return ShowHelp();
             default:
         }
         return "";

@@ -14,6 +14,7 @@ public class BlockStats {
         QueryDB querydb = SATObjFactory.GetQueryDB();
         querydb.ShowStats();
     }
+    public static int GetNtotal(){ return Ntotal; }
     public static String GetTopHash() {
         return BlockStats.top != null ? BlockStats.top.header.hash : "";
     }
@@ -21,7 +22,7 @@ public class BlockStats {
         return BlockStats.mctop != null ? BlockStats.mctop.header.hash : "";
     }
     public static void GetPointer() {
-        top = SATObjFactory.GetMainTop().GetTopBlock();
-        mctop = SATObjFactory.GetMainTop().GetMCTopBlock();
+        top = SATObjFactory.GetMainTop().GetMCBlock();
+        mctop = SATObjFactory.GetMainTop().GetMCBlock();
     }
 }

@@ -4,6 +4,8 @@ import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import org.junit.Test;
+
 import com.smartx.block.Block;
 import com.smartx.core.blockchain.BlockHash;
 
@@ -14,6 +16,10 @@ public class Sha256 {
     public static String getH256(Block blk) {
         BlockHash bhash = new BlockHash();
         return bhash.getH256(blk);
+    }
+    public Sha256()
+    {
+
     }
     public static String getSHA256(String str) {
         MessageDigest messageDigest;
@@ -29,6 +35,16 @@ public class Sha256 {
         }
         return encodestr;
     }
+    @Test
+    public void TestSha256()
+    {
+        String str = "smartx";
+        byte[] strbyte = Sha256.getSha256Byte(str);
+        String hash = byte2Hex(strbyte);
+        System.out.println(hash);
+
+    }
+
     public static byte[] getSha256Byte(String str) {
         MessageDigest messageDigest;
         String encodestr = "";

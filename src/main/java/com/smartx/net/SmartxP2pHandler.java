@@ -406,7 +406,8 @@ public class SmartxP2pHandler extends SimpleChannelInboundHandler<Message> {
         }
         // not connected
         if (client.getPeerId().equals(peer.getPeerId()) || channelMgr.isActivePeer(peer.getPeerId())) {
-            logger.debug("client peer id is {} remote peer id is {} duplicated peer id" + client.getPeerId() + peer.getPeerId());
+            logger.debug(String.format("client peer id is {%s} remote peer id is {%s} duplicated peer id" ,
+                    client.getPeerId(), peer.getPeerId()));
             return ReasonCode.DUPLICATED_PEER_ID;
         }
         // validator can't share IP address

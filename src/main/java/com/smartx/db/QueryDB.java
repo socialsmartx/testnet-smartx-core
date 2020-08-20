@@ -27,38 +27,20 @@ import com.smartx.util.TxBlock;
 
 public class QueryDB extends DataDB {
     private static final Logger logger = Logger.getLogger("core");
-    public int GetAllMainHeight(final long height, final int dbtype) throws SatException, SQLException {
-        final TransDB txdb = SATObjFactory.GetTxDB();
-        synchronized (this) {
-            try {
-                final DbSource dbsrc = SATObjFactory.GetDbSource();
-                String sql = "select count(*) as a from " + dbsrc.GetDBName();
-                if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_order where";
-                else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH) sql += "t_waitorder where";
-                sql += " fheight =";
-                sql += height;
-                sql += " and fbtype in (1,2)";
-                return Integer.parseInt(txdb.GetLine(sql));
-            } catch (final SatException e) {
-                throw e;
-            } catch (final SQLException e) {
-                throw e;
-            }
-        }
-    }
-    public String GetHashByNonce(final String nonce) throws SatException, SQLException {
+    public String GetHashByNonce(String nonce) throws SatException, SQLException {
         final TransDB txdb = SATObjFactory.GetTxDB();
         String sql = "select fhash as a from t_order where Fnonce = '";
         sql += nonce;
         sql += "'";
         return txdb.GetLine(sql);
     }
-    public int GetTxBlocks(final String address, final List<TxBlock> blocks) throws SatException, SQLException {
+    public int GetTxBlocks(String address, List<TxBlock> blocks, long offset) throws SatException, SQLException {
         final DataSet dt = new DataSet(DataDB.m_DBConnet);
         try {
             String sql = "select Finhash, Fouthash, famount, ftime, fnonce from t_fields where finhash = '";
             sql += address;
-            sql += "' order by ftime desc limit 10";
+            sql += "' order by ftime desc limit 10 offset ";
+            sql += offset;
             if (!dt.Init(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "db open error");
             while (!dt.IsEnd()) {
                 final TxBlock unit = new TxBlock();
@@ -74,7 +56,9 @@ public class QueryDB extends DataDB {
             dt.Close();
             sql = "select Finhash, Fouthash, famount, ftime, fnonce from t_fields where fouthash = '";
             sql += address;
-            sql += "' order by ftime desc limit 10";
+            sql += "' order by ftime desc limit 10 offset ";
+            sql += offset;
+
             if (!dt.Init(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "db open error");
             while (!dt.IsEnd()) {
                 final TxBlock unit = new TxBlock();
@@ -96,23 +80,34 @@ public class QueryDB extends DataDB {
             dt.Close();
         }
     }
+    public static String ShowBalance(String address) throws SatException, SQLException {
+        AccountDB accdb = SATObjFactory.GetAccDB();
+        Account acc = accdb.GetAccount(address);
+        if (acc != null ) {
+            System.out.println(acc.balance);
+            return acc.balance.toString();
+        }
+        return "";
+    }
+
     public static String ShowBalance() throws SatException, SQLException {
-        final AccountDB accdb = SATObjFactory.GetAccDB();
-        final ArrayList<Account> accs = accdb.GetAllAccount();
+        AccountDB accdb = SATObjFactory.GetAccDB();
+        ArrayList<Account> accs = accdb.GetAllAccount();
         Collections.sort(accs, new SortByChar());
         String strs = "";
         for (int i = 0; i < accs.size(); i++) {
-            final String stmp = accs.get(i).address + " " + accs.get(i).balance;
+            String stmp = accs.get(i).address + " " + Double.parseDouble(accs.get(i).balance.toString())/10000;
             System.out.println(stmp);
-            strs += accs.get(i).address + " " + accs.get(i).balance + "\n";
+            strs += accs.get(i).address + " " + accs.get(i).balance + "\r\n";
         }
         return strs;
     }
-    public void ClearCache(final int dbtype) {
+    public void ClearCache(int dbtype) {
         synchronized (this) {
             try {
-                final DbSource dbsrc = SATObjFactory.GetDbSource();
-                final DataSet dt = new DataSet(DataDB.m_DBConnet);
+                DbSource dbsrc = SATObjFactory.GetDbSource();
+                DataSet dt = new DataSet(DataDB.m_DBConnet);
+                DataDB.m_DBConnet.Begin();
                 String sql = "delete from " + dbsrc.GetDBName();
                 if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_order";
                 else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH) sql += "t_waitorder";
@@ -125,58 +120,13 @@ public class QueryDB extends DataDB {
                 if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_fields";
                 else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH) sql += "t_waitfields";
                 if (!dt.excute(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "delete fields error");
-            } catch (final Exception e) {
+                sql = "delete from t_account";
+                dt.excute(sql);
+                DataDB.m_DBConnet.Commit();
+            } catch (Exception e) {
                 e.printStackTrace();
+                DataDB.m_DBConnet.RollBack();
             }
-        }
-    }
-    public void GetAllMainBlock(final ArrayList<Block> blks, final int count, final int dbtype) throws SatException, SQLException {
-        final TransDB txdb = SATObjFactory.GetTxDB();
-        final DataSet dt = new DataSet(DataDB.m_DBConnet);
-        try {
-            final DbSource dbsrc = SATObjFactory.GetDbSource();
-            String sql = "select fhash, ftime, fnonce, fnum, fbtype, fdiff, fnodename, Frecv_time, Fheight, Frulesign from " + dbsrc.GetDBName();
-            if (dbtype == DataBase.SMARTX_BLOCK_HISTORY)
-                sql += " t_order where fbtype in (1,2) " + "order by ftime desc";
-            else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH)
-                sql += " t_waitorder where fbtype in (1,2) " + "order by ftime desc";
-            if (count != 0) {
-                sql = "select fhash, ftime, fnonce, fnum, fbtype, fdiff, fnodename, Frecv_time, Fheight, Frulesign from " + dbsrc.GetDBName();
-                if (dbtype == DataBase.SMARTX_BLOCK_HISTORY)
-                    sql += " t_order where fbtype in (1,2) " + "order by ftime desc limit " + count;
-                else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH)
-                    sql += " t_waitorder where fbtype in (1,2) " + "order by ftime desc limit " + count;
-            }
-            if (!dt.Init(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "open db error");
-            while (!dt.IsEnd()) {
-                final Block blk = new Block();
-                blk.header.hash = dt.rs.getString("fhash");
-                blk.time = dt.rs.getString("ftime");
-                blk.timenum = dt.rs.getLong("fnum");
-                blk.header.nonce = dt.rs.getString("fnonce");
-                blk.diff = dt.rs.getString("fdiff");
-                blk.nodename = dt.rs.getString("fnodename");
-                blk.header.btype = Block.BLKType.values()[dt.rs.getInt("Fbtype")];
-                blk.recvtime = dt.rs.getString("Frecv_time");
-                blk.height = dt.rs.getInt("Fheight");
-                blk.ruleSigns = Tools.GetRuleSignListByJson(dt.rs.getString("Frulesign"));
-                final ArrayList<String> refhashs = txdb.GetReferHashs(blk, DataBase.SMARTX_BLOCK_HISTORY);
-                for (int i = 0; i < refhashs.size(); i++) {
-                    final Field field = new Field();
-                    field.amount = new BigInteger("0");
-                    field.type = Field.FldType.SAT_FIELD_OUT;
-                    field.hash = refhashs.get(i).split("\\|")[0];
-                    //field.time = refedblk.time;
-                    blk.Flds.add(field);
-                }
-                blks.add(blk);
-            }
-        } catch (final SatException e) {
-            throw e;
-        } catch (final SQLException e) {
-            throw e;
-        } finally {
-            dt.Close();
         }
     }
     public void ShowStats() {
@@ -203,38 +153,7 @@ public class QueryDB extends DataDB {
         BlockStats.MCs = Integer.parseInt(txdb.GetLine(sql));
         System.out.println(BlockStats.MCs);
     }
-    public ArrayList<Block> GetAllMainEpoch(final long num, final int dbtype) throws SatException, SQLException {
-        final TransDB txdb = SATObjFactory.GetTxDB();
-        final DataSet dt = new DataSet(DataDB.m_DBConnet);
-        final ArrayList<String> hashs = new ArrayList<String>();
-        final ArrayList<Block> blks = new ArrayList<Block>();
-        hashs.clear();
-        blks.clear();
-        try {
-            final DbSource dbsrc = SATObjFactory.GetDbSource();
-            String sql = "select Fhash from " + dbsrc.GetDBName();
-            if (dbtype == DataBase.SMARTX_BLOCK_HISTORY) sql += "t_order where";
-            else if (dbtype == DataBase.SMARTX_BLOCK_EPOCH) sql += "t_waitorder where";
-            sql += " fnum =";
-            sql += num;
-            sql += " and fbtype in (1,2)";
-            if (!dt.Init(sql)) throw new SatException(ErrCode.DB_OPEN_ERROR, "open db error");
-            while (!dt.IsEnd()) hashs.add(dt.rs.getString("Fhash"));
-            dt.Close();
-            for (int i = 0; i < hashs.size(); i++) {
-                final Block blk = txdb.GetBlock(hashs.get(i), dbtype);
-                blks.add(blk);
-            }
-            return blks;
-        } catch (final SatException e) {
-            throw e;
-        } catch (final SQLException e) {
-            throw e;
-        } finally {
-            dt.Close();
-        }
-    }
-    public static String ShowBlockEx(final String hash) throws SatException, SQLException {
+    public static String ShowBlockEx(String hash) throws SatException, SQLException {
         final TransDB txdb = SATObjFactory.GetTxDB();
         final TraverBlock tvblock = SATObjFactory.GetTravBlock();
         final Block blk = txdb.GetBlock(hash, DataBase.SMARTX_BLOCK_HISTORY);
@@ -264,13 +183,13 @@ public class QueryDB extends DataDB {
                 }
             } else {
                 // If the reference block does not exist, only the hash of the reference block is displayed
-                str += ("	hash:" + fld.hash + " type:" + fld.type + " " + fld.amount);
+                str += ("	missing hash:" + fld.hash + " type:" + fld.type + " " + fld.amount);
                 str += "\n";
             }
         }
         return str;
     }
-    public static void ShowBlock(final String hash) throws SatException, SQLException {
+    public static void ShowBlock(String hash) throws SatException, SQLException {
         final TransDB txdb = SATObjFactory.GetTxDB();
         final TraverBlock tvblock = SATObjFactory.GetTravBlock();
         final Block blk = txdb.GetBlock(hash, DataBase.SMARTX_BLOCK_HISTORY);
@@ -291,7 +210,7 @@ public class QueryDB extends DataDB {
                     if (null != fldblk) System.out.println("        fldhash:" + fldblk.header.hash);
                 }
             } else {
-                System.out.println("	hash:" + fld.hash + " type:" + fld.type + " " + fld.amount);
+                System.out.println("	missing hash:" + fld.hash + " type:" + fld.type + " " + fld.amount);
             }
         }
     }
