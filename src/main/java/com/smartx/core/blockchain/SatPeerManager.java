@@ -45,4 +45,28 @@ public class SatPeerManager {
         }
         return null;
     }
+
+    public Message QueryRegisterERC(String url, Message message) throws Exception {
+        try {
+            String content = "";
+            Gson gson = new GsonBuilder().create();
+            String json = Tools.getURLEncoderString(gson.toJson(message));
+            url = "http://" + url;
+            url += "/v1.0.0/registerERC?json=";
+            url += json;
+            content = HttpClientUtil.httpClientCallException(url, 5000, "utf-8");
+            GetMineTaskResponse response = gson.fromJson(content, new TypeToken<GetMineTaskResponse>() {
+            }.getType());
+            Message resp = Message.FromJson(Tools.getURLDecoderString(response.getResult().getJson()));
+            if (resp != null && resp.args.get("ret").equals("0")) {
+                return resp;
+            }
+        } catch (Exception e) {
+            //e.printStackTrace();
+            //treturn null;
+            throw e;
+        }
+        return null;
+    }
+
 }

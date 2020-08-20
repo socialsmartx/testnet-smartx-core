@@ -49,7 +49,7 @@ public class MineThread implements Runnable {
         {
             //if (start >= end || Miningblk==null)
             {
-                // 如果异常 停止挖矿等待 OnNewMineTask才会继续
+                // If the mining stops abnormally, wait for OnNewMineTask to continue
                 Message message = new Message(Message.MESSAGE_GET_MINE_TASK);
                 message.args = new HashMap<String, String>();
                 message.args.put("height", String.valueOf(height));
@@ -87,14 +87,15 @@ public class MineThread implements Runnable {
         message.args.put("ercAddress", ErcAddress);
         message.args.put("phone", Phone);
         SatPeerManager client = new SatPeerManager();
-        Message resp = client.QueryMessageV1(PoolUrl, message);
+        Message resp = client.QueryRegisterERC(PoolUrl, message);
         if (resp == null || resp.args.get("result") == null)
         {
             System.out.println("RegisterERC Error: pool no reply");
             return false;
         }
 
-        if(resp.args.get("result")=="ok") {
+        if(resp.args.get("result").equals("ok")) {
+            System.out.println("RegisterERC OK!");
             return true;
         }
         else {
@@ -167,7 +168,7 @@ public class MineThread implements Runnable {
             } else if (str.indexOf("threads") == 0) {
                 nThreads = Integer.valueOf(str.replace("threads:", ""));
             } else if (str.indexOf("erc") == 0) {
-                mineThread.ErcAddress = str.replace("erc:", "");
+                mineThread.ErcAddress = "0x" + str.replace("erc:", "");
             } else if (str.indexOf("phone") == 0) {
                 mineThread.Phone = str.replace("phone:", "");
             }
@@ -180,11 +181,10 @@ public class MineThread implements Runnable {
             thread.start();
         }
         Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
-        Runtime run = Runtime.getRuntime();//当前 Java 应用程序相关的运行时对象。
-        run.addShutdownHook(new Thread() { //注册新的虚拟机来关闭钩子
+        Runtime run = Runtime.getRuntime();
+        run.addShutdownHook(new Thread() {
             @Override
             public void run() {
-                //程序结束时进行的操作
                 g_do_mining = false;
             }
         });
