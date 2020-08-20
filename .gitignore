@@ -21,7 +21,6 @@ distribution
 /MyWallet
 /conf
 /wallet.data
-/ java-smartx-core-rule.rar
 
 #log
 *.log
