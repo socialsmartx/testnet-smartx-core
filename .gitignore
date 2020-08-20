@@ -5,6 +5,7 @@ target
 
 #project files
 *.iml
+wallet.data
 
 #compile object files
 *.o
@@ -21,6 +22,7 @@ distribution
 /MyWallet
 /conf
 /wallet.data
+/distribution
 
 #log
 *.log
