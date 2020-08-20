@@ -4,6 +4,7 @@ bin
 
 #project files
 *.iml
+wallet.data
 
 #compile object files
 *.o
@@ -17,6 +18,8 @@ target
 /src/main/java/com/smartx/api/v1/server/impl
 /MyWallet
 /conf
+/distribution
+
 
 #log
 *.log
