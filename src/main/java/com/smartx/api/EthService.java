@@ -70,6 +70,7 @@ public class EthService {
         EthCall response = web3j.ethCall(Transaction.createEthCallTransaction(address, "0x1f0f468ee03a6d99cd8a09dd071494a83dc1c0e5",
                                         encodedFunction), DefaultBlockParameterName.LATEST).sendAsync().get();
         String returnValue = response.getValue(); //返回16进制余额
+        if (null == returnValue) return 0;
         returnValue = returnValue.substring(2);
         BigInteger balance = new BigInteger(returnValue, 16);
         return  Double.parseDouble(balance.toString())/10000;

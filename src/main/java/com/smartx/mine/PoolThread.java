@@ -3,6 +3,7 @@ package com.smartx.mine;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 import org.apache.log4j.Logger;
 
@@ -63,14 +64,16 @@ public class PoolThread implements Runnable, PubSubSubscriber {
                 try {
                     double satbalance = EthService.getTokenBalance(erctoken);
                     log.info("address balance:" + satbalance);
-                    if (satbalance > 10000)
+                    if (satbalance > 200000)
                         return true;
                     else {
-                        log.warn("address:" + address + " not enough 10000");
+                        log.warn("address:" + address + " not enough 200000");
                         return false;
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
+                    log.warn("unknow exception");
+                    return false;
                 }
             }
             log.warn("address:" + address + " not enough 10000");
@@ -223,19 +226,23 @@ public class PoolThread implements Runnable, PubSubSubscriber {
         Message resp = new Message();
         resp.args = new HashMap<String, String>();
 
-        if(!IsSatTokenBalance(ercAddress))
-        {
-            resp.args.put("error", "sat not enough 200000");
-        }
-
         if( SaveERCAndPhone(address,ercAddress,phone) )
         {
-            if(!IsSatTokenBalance(ercAddress)) {
-                resp.args.put("result", "sat not enough 200000");
+            try {
+                double satbalance = EthService.getTokenBalance(ercAddress);
+                log.info("address balance:" + satbalance);
+
+                if (satbalance < 200000) {
+                    resp.args.put("result", "sat not enough 200000");
+                    log.warn("address:" + address + " not enough 200000");
+                    return resp;
+                }
             }
-            else {
-                resp.args.put("result", "ok");
+            catch (Exception e) {
+                e.printStackTrace();
+                return resp;
             }
+            resp.args.put("result", "ok");
         }
 
         return resp;
