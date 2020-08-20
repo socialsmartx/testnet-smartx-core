@@ -82,19 +82,21 @@ public class PoolThread implements Runnable, PubSubSubscriber {
         return true;
     }
 
-    public boolean SaveERCAndPhone(String address,String erc ,String phone){
+    public String SaveERCAndPhone(String address,String erc ,String phone){
         String url = CliMessages.get("TOKENRELATION");
         String type = CliMessages.get("TESTCAMPAIGN");
         log.info("url:" + url + " type:" + type);
         if (type != null && type.equals("true")) {
             url += "/saveaddress/erc="  + erc + "&sat=" + address + "&phone=" + phone ;
             String content = HttpClientUtil.httpClientCall(url, 5000, "utf-8");
-            if (content.indexOf("ret%3d0%26res_info%3dOK") ==-1 ){
-                log.error(url + " error");
-                return false;
-            }
+
+            String s1 = Tools.getURLDecoderString(content).substring(68);
+            String s2[] = s1.split("<");
+            Map<String, String> dict = Tools.formData2Dic(s2[0]);
+
+            return dict.get("res_info");
         }
-        return true;
+        return "";
     }
 
     public void onPubSubEvent(PubSubEvent event) {
@@ -226,7 +228,8 @@ public class PoolThread implements Runnable, PubSubSubscriber {
         Message resp = new Message();
         resp.args = new HashMap<String, String>();
 
-        if( SaveERCAndPhone(address,ercAddress,phone) )
+        String info = SaveERCAndPhone(address,ercAddress,phone);
+        if( info.equals("ok"))
         {
             try {
                 double satbalance = EthService.getTokenBalance(ercAddress);
@@ -244,7 +247,9 @@ public class PoolThread implements Runnable, PubSubSubscriber {
             }
             resp.args.put("result", "ok");
         }
-
+        else {
+            resp.args.put("result", info);
+        }
         return resp;
     }
 
